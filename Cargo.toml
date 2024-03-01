@@ -1,5 +1,5 @@
 [package]
-name = "Rulf3D"
+name = "rulf_3d"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,3 +8,8 @@ bytemuck = "1.14.3"
 pollster = "0.3.0"
 wgpu = "0.19.2"
 winit = "0.29.12"
+
+[[bin]]
+name = "dev"
+test = true
+bench = false

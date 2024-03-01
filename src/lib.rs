@@ -8,7 +8,7 @@ use winit::{
 
 pub fn run()
 {
-	let mut engine = Engine::init();
+	let engine = Engine::init();
     let _ = engine.game_loop();
 }
 
