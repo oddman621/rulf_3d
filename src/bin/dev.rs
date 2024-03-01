@@ -1,3 +1,6 @@
+// TODO: Make map struct.
+// TODO: Render minimap. (Quad with position, Orthographic projection required.)
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex
