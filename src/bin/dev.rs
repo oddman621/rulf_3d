@@ -9,6 +9,22 @@
 // TODO: Draw Line.
 // TODO: Draw Triangle with direction.
 
+// After...
+// TODO: Make basic game logic(input, movement, collision, ...).
+// TODO: Make playable only with minimap. (Complete 2D game)
+// TODO: Make consistent calculation for f(distnace) -> depth.
+// TODO: Compute raycast and render written depth 1d texture.
+// TODO: Render written depth 2d texture.
+// TODO: Render with wall texture.
+// TODO: Add background.
+// TODO: Add Sprite. Make static object.
+// TODO: Add texture for sprite.
+// TODO: Make more game logic.(weapon system, fire, ...)
+
+// Future...
+// TODO: Enemy (Sprite, Logic, AI, ...)
+// TODO: Complete game logic.
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex
