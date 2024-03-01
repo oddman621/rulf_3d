@@ -26,6 +26,35 @@ impl rulf_3d::DevLoop for DrawQuad
 			Vertex { position: [-1.0, -1.0, 0.0], color: [0.0, 0.0, 1.0] },
 			Vertex { position: [-1.0, 1.0, 0.0], color: [0.0, 1.0, 1.0] },
 		];
+		const SHADER_SOURCE: &str = "struct VertexInput
+		{
+			@location(0) position: vec3<f32>,
+			@location(1) color: vec3<f32>
+		}
+		
+		struct VertexOutput 
+		{
+			@builtin(position) clip_position: vec4<f32>,
+			@location(0) vert_color: vec3<f32>
+		}
+		
+		@vertex
+		fn vs_main(
+			@builtin(vertex_index) in_vertex_index: u32,
+			vertex: VertexInput
+		) -> VertexOutput 
+		{
+			var out: VertexOutput;
+			out.clip_position = vec4<f32>(vertex.position, 1.0);
+			out.vert_color = vertex.color;
+			return out;
+		}
+		
+		@fragment
+		fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> 
+		{
+			return vec4<f32>(in.vert_color, 1.0);
+		}";
 
 		self.vertex_buffer = Some(device.create_buffer_init(
 			&wgpu::util::BufferInitDescriptor
@@ -37,7 +66,13 @@ impl rulf_3d::DevLoop for DrawQuad
 		));
 
 		//wgpu::ShaderSource::Wgsl(SOURCE_STR_SLICE.into())
-		self.shader = Some(device.create_shader_module(wgpu::include_wgsl!("defaultshader.wgsl")));
+		self.shader = Some(device.create_shader_module(
+			wgpu::ShaderModuleDescriptor
+			{
+				label: Some("DrawQuad shader module"),
+				source: wgpu::ShaderSource::Wgsl(SHADER_SOURCE.into())
+			}
+		));
 		self.render_pipeline = Some(device.create_render_pipeline(
 			&wgpu::RenderPipelineDescriptor
 			{
