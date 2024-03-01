@@ -1,8 +1,3 @@
-// TODO: Add depth buffer and apply it.
-// TODO: Apply camera mvp.
-// TODO: Recreate depth buffer when resizing window. (especially aspect ratio)
-
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex
