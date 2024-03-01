@@ -1,3 +1,6 @@
+// TODO: Add depth buffer and apply it.
+// TODO: Apply camera mvp.
+// TODO: Recreate depth buffer when resizing window. (especially aspect ratio)
 
 
 #[repr(C)]
@@ -14,9 +17,10 @@ struct DrawQuad
 {
 	vertex_buffer: Option<wgpu::Buffer>,
 	render_pipeline: Option<wgpu::RenderPipeline>,
-	shader: Option<wgpu::ShaderModule>
+	shader: Option<wgpu::ShaderModule>,
+	depth_texture: Option<wgpu::Texture>
 }
-impl rulf_3d::GameLoop for DrawQuad 
+impl rulf_3d::DevLoop for DrawQuad 
 {
     fn startup(&mut self, device: &wgpu::Device, surface_format: wgpu::TextureFormat)
 	{
@@ -78,7 +82,14 @@ impl rulf_3d::GameLoop for DrawQuad
 					polygon_mode: wgpu::PolygonMode::Fill,
 					..Default::default()
 				},
-				depth_stencil: None, // TODO: Add depth stencil!
+				depth_stencil: Some(wgpu::DepthStencilState
+					{
+						format: wgpu::TextureFormat::Depth32Float,
+						depth_write_enabled: true,
+						depth_compare: wgpu::CompareFunction::Less,
+						stencil: wgpu::StencilState::default(),
+						bias: wgpu::DepthBiasState::default()
+					}),
 				multisample: wgpu::MultisampleState::default(),
 				multiview: None
 			}
@@ -88,7 +99,47 @@ impl rulf_3d::GameLoop for DrawQuad
     fn render(&mut self, device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue)
 	{
 		let output = surface.get_current_texture().expect("Failed to get current texture.");
+		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+		// destroy and create depth texture
+		if self.depth_texture.is_some()
+		{
+			let prev_depth_texture = self.depth_texture.as_ref().unwrap();
+			if size != prev_depth_texture.size()
+			{
+				self.depth_texture.as_ref().unwrap().destroy()
+			}
+		}
+
+		if !self.depth_texture.as_ref().is_some_and(|f| f.size() == output.texture.size())
+		{
+			if self.depth_texture.is_some()
+			{
+				self.depth_texture.as_ref().unwrap().destroy();
+			}
+			self.depth_texture = Some(device.create_texture(
+				&wgpu::TextureDescriptor
+				{
+					label: None,
+					size: wgpu::Extent3d
+					{
+						width: size.width,
+						height: size.height,
+						depth_or_array_layers: 1
+					},
+					mip_level_count: 1,
+					sample_count: 1,
+					dimension: wgpu::TextureDimension::D2,
+					format: wgpu::TextureFormat::Depth32Float,
+					usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+					view_formats: &[]
+				}
+			));
+		}
+		let depth_texture_view = self.depth_texture.as_ref().unwrap().create_view(&wgpu::TextureViewDescriptor::default());
+
+		
 
 		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
@@ -107,7 +158,18 @@ impl rulf_3d::GameLoop for DrawQuad
 						}
 					})
 				],
-				depth_stencil_attachment: None, // TODO: Add depth stencil!
+				depth_stencil_attachment: Some(
+					wgpu::RenderPassDepthStencilAttachment
+					{
+						view: &depth_texture_view,
+						depth_ops: Some(wgpu::Operations
+						{
+							load: wgpu::LoadOp::Clear(1.0),
+							store: wgpu::StoreOp::Store
+						}),
+						stencil_ops: None
+					}
+				),
 				..Default::default()
 			}
 		);

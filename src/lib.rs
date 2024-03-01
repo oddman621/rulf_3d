@@ -6,13 +6,13 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-pub fn run_dev(t: impl GameLoop)
+pub fn run_dev(t: impl DevLoop)
 {
 	let engine = Engine::init();
     let _ = engine.game_loop(t);
 }
 
-pub trait GameLoop
+pub trait DevLoop
 {
     fn startup(&mut self, device: &wgpu::Device, surface_format: wgpu::TextureFormat);
     fn process(&mut self, delta: f64);
@@ -89,7 +89,7 @@ impl Engine
 
     fn game_loop(
         mut self,
-        mut t: impl GameLoop
+        mut t: impl DevLoop
     ) -> Result<(), winit::error::EventLoopError>
     {
         let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
