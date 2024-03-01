@@ -1,5 +1,13 @@
+
+// Major priority
+// TODO: Draw Rect(Quad) from screen coord. (left, right, top, bottom)
 // TODO: Make map struct.
-// TODO: Render minimap. (Quad with position, Orthographic projection required.)
+// TODO: Finally, render minimap.
+
+// Lower priority
+// TODO: Draw Circle.
+// TODO: Draw Line.
+// TODO: Draw Triangle with direction.
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
