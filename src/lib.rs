@@ -14,7 +14,7 @@ pub fn run_dev(t: impl GameLoop)
 
 pub trait GameLoop
 {
-    fn startup(&mut self, device: &wgpu::Device);
+    fn startup(&mut self, device: &wgpu::Device, surface_format: wgpu::TextureFormat);
     fn process(&mut self, delta: f64);
     fn render(&mut self, device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue);
 }
@@ -119,7 +119,7 @@ impl Engine
                 Event::NewEvents(StartCause::Init) =>
                 {
                     // NOTE: startup things
-                    t.startup(&self.device);
+                    t.startup(&self.device, self.config.format);
                 }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
