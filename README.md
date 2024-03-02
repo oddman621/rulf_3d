@@ -10,6 +10,7 @@ Mimic Wolfenstein 3D's raycast rendering with computing GPU and make the engine 
 - [ ] Make Player with basic movement and collision, and render it.
 
 ### Secondary Mission for Achievement
+- [X] Draw Quad
 - [ ] Draw Triangle
 - [ ] Draw Line
 - [ ] Draw Circle
