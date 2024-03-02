@@ -1,30 +1,3 @@
-
-// Major priority
-// TODO: Draw Rect(Quad) from screen coord. (left, right, top, bottom)
-// TODO: Make map struct.
-// TODO: Finally, render minimap.
-
-// Lower priority
-// TODO: Draw Circle.
-// TODO: Draw Line.
-// TODO: Draw Triangle with direction.
-
-// After...
-// TODO: Make basic game logic(input, movement, collision, ...).
-// TODO: Make playable only with minimap. (Complete 2D game)
-// TODO: Make consistent calculation for f(distnace) -> depth.
-// TODO: Compute raycast and render written depth 1d texture.
-// TODO: Render written depth 2d texture.
-// TODO: Render with wall texture.
-// TODO: Add background.
-// TODO: Add Sprite. Make static object.
-// TODO: Add texture for sprite.
-// TODO: Make more game logic.(weapon system, fire, ...)
-
-// Future...
-// TODO: Enemy (Sprite, Logic, AI, ...)
-// TODO: Complete game logic.
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex
@@ -33,14 +6,15 @@ struct Vertex
 	color: [f32; 3]
 }
 
-
 #[derive(Default)]
 struct DrawQuad
 {
 	vertex_buffer: Option<wgpu::Buffer>,
 	render_pipeline: Option<wgpu::RenderPipeline>,
 	shader: Option<wgpu::ShaderModule>,
-	depth_texture: Option<wgpu::Texture>
+	depth_texture: Option<wgpu::Texture>,
+	mvp_buffer: Option<wgpu::Buffer>,
+	bind_group: Option<wgpu::BindGroup>
 }
 impl rulf_3d::DevLoop for DrawQuad 
 {
@@ -53,35 +27,7 @@ impl rulf_3d::DevLoop for DrawQuad
 			Vertex { position: [-1.0, -1.0, 0.0], color: [0.0, 0.0, 1.0] },
 			Vertex { position: [-1.0, 1.0, 0.0], color: [0.0, 1.0, 1.0] },
 		];
-		const SHADER_SOURCE: &str = "struct VertexInput
-		{
-			@location(0) position: vec3<f32>,
-			@location(1) color: vec3<f32>
-		}
-		
-		struct VertexOutput 
-		{
-			@builtin(position) clip_position: vec4<f32>,
-			@location(0) vert_color: vec3<f32>
-		}
-		
-		@vertex
-		fn vs_main(
-			@builtin(vertex_index) in_vertex_index: u32,
-			vertex: VertexInput
-		) -> VertexOutput 
-		{
-			var out: VertexOutput;
-			out.clip_position = vec4<f32>(vertex.position, 1.0);
-			out.vert_color = vertex.color;
-			return out;
-		}
-		
-		@fragment
-		fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> 
-		{
-			return vec4<f32>(in.vert_color, 1.0);
-		}";
+		const SHADER_SOURCE: &str = include_str!("shader/vert_color_render.wgsl");
 
 		self.vertex_buffer = Some(device.create_buffer_init(
 			&wgpu::util::BufferInitDescriptor
@@ -91,8 +37,16 @@ impl rulf_3d::DevLoop for DrawQuad
 				contents: bytemuck::cast_slice(VERTICES)
 			}
 		));
+		self.mvp_buffer = Some(device.create_buffer(
+			&wgpu::BufferDescriptor
+			{
+				label: Some("DrawQuad MVP Buffer"),
+				size: std::mem::size_of::<glam::Mat4>() as u64,
+				usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+				mapped_at_creation: false
+			}
+		));
 
-		//wgpu::ShaderSource::Wgsl(SOURCE_STR_SLICE.into())
 		self.shader = Some(device.create_shader_module(
 			wgpu::ShaderModuleDescriptor
 			{
@@ -149,6 +103,21 @@ impl rulf_3d::DevLoop for DrawQuad
 					}),
 				multisample: wgpu::MultisampleState::default(),
 				multiview: None
+			}
+		));
+
+		self.bind_group = Some(device.create_bind_group(
+			&wgpu::BindGroupDescriptor
+			{
+				label: Some("DrawQuad Bind Group"),
+				layout: &self.render_pipeline.as_ref().unwrap().get_bind_group_layout(0),
+				entries: &[
+					wgpu::BindGroupEntry
+					{
+						binding: 0,
+						resource: self.mvp_buffer.as_ref().unwrap().as_entire_binding()
+					}
+				]
 			}
 		));
 	}
@@ -231,7 +200,10 @@ impl rulf_3d::DevLoop for DrawQuad
 			}
 		);
 
+		queue.write_buffer(&self.mvp_buffer.as_ref().unwrap(), 0, bytemuck::cast_slice(glam::Mat4::IDENTITY.as_ref()));
+
 		render_pass.set_pipeline(self.render_pipeline.as_ref().unwrap());
+		render_pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.as_ref().unwrap().slice(..));
 		render_pass.draw(0..4, 0..1);
 		drop(render_pass);
