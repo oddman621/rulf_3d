@@ -6,6 +6,8 @@ struct Vertex
 	color: [f32; 3]
 }
 
+struct DrawMap;
+
 #[derive(Default)]
 struct DrawQuad
 {
@@ -200,7 +202,16 @@ impl rulf_3d::DevLoop for DrawQuad
 			}
 		);
 
-		queue.write_buffer(&self.mvp_buffer.as_ref().unwrap(), 0, bytemuck::cast_slice(glam::Mat4::IDENTITY.as_ref()));
+
+		
+		const ORTHO_WIDTH: f32 = 32.0;
+		const ORTHO_HEIGHT: f32 = 24.0;
+		let model = glam::Mat4::from_translation(glam::vec3(10.0, 10.0, 0.0));
+		let view_pos = glam::vec3(ORTHO_WIDTH/2.0, ORTHO_HEIGHT/2.0, -2.0);
+		let view = glam::Mat4::from_translation(-view_pos);
+		let ortho = glam::Mat4::orthographic_lh(0.0, ORTHO_WIDTH, -ORTHO_HEIGHT, 0.0, 0.1, 100.0);
+
+		queue.write_buffer(&self.mvp_buffer.as_ref().unwrap(), 0, bytemuck::cast_slice((ortho * view * model).as_ref()));
 
 		render_pass.set_pipeline(self.render_pipeline.as_ref().unwrap());
 		render_pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
