@@ -21,7 +21,7 @@ pub trait DevLoop
 
 pub trait InputEvent
 {
-    fn keyboard_input(&mut self, physical_key: winit::keyboard::PhysicalKey, state: winit::event::ElementState);
+    fn keyboard_input(&mut self, keycode: winit::keyboard::KeyCode, state: winit::event::ElementState);
     //fn mouse_move_input(&mut self, position: winit::dpi::PhysicalPosition<f64>, relative: [f64; 2]);
     //fn mouse_button_input(&mut self, button: winit::event::MouseButton, state: winit::event::ElementState);
     //fn mouse_wheel_input(&mut self, delta: winit::event::MouseScrollDelta);
@@ -111,8 +111,8 @@ impl Engine
                 Event::WindowEvent { event, window_id } if window_id == self.window.id() => 
                 match event 
                 {
-                    WindowEvent::KeyboardInput { event: winit::event::KeyEvent { physical_key, state, repeat, .. }, .. } 
-                    if repeat == false => devloop.keyboard_input(physical_key, state),
+                    WindowEvent::KeyboardInput { event: winit::event::KeyEvent { physical_key: winit::keyboard::PhysicalKey::Code(keycode), state, repeat, .. }, .. } 
+                    if repeat == false => devloop.keyboard_input(keycode, state),
                     //WindowEvent::MouseInput { state: _state, button: _button, .. } => (), // TODO
                     //WindowEvent::CursorMoved { position: _position, .. } => (), // TODO
                     //WindowEvent::AxisMotion { axis: _axis, value: _value, .. } =>(), // TODO

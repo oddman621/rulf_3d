@@ -9,6 +9,7 @@ struct Vertex
 	uv: [f32; 2]
 }
 
+
 struct DrawMap
 {
 	vertex_buffer: wgpu::Buffer,
@@ -16,7 +17,11 @@ struct DrawMap
 	render_pipeline: wgpu::RenderPipeline,
 	depth_texture: wgpu::Texture,
 	mvp_buffer: wgpu::Buffer,
-	bind_group: wgpu::BindGroup
+	bind_group: wgpu::BindGroup,
+	
+	rotation_angle: f64,
+	input_left: bool,
+	input_right: bool
 }
 
 impl DrawMap
@@ -245,10 +250,23 @@ impl rulf_3d::DevLoop for DrawMap
 		render_pipeline,
 		depth_texture,
 		mvp_buffer,
-		bind_group
+		bind_group,
+		rotation_angle: f64::default(),
+		input_left: false,
+		input_right: false
 		}
 	}
-    fn process(&mut self, _delta: f64){}
+    fn process(&mut self, delta: f64)
+	{
+		if self.input_left
+		{
+			self.rotation_angle -= 15.0 * delta;
+		}
+		if self.input_right
+		{
+			self.rotation_angle += 15.0 * delta;
+		}
+	}
     fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface)
 	{
 		let output = surface.get_current_texture().unwrap();
@@ -283,7 +301,7 @@ impl rulf_3d::DevLoop for DrawMap
 		const CAMERA_HEIGHT: f32 = 13.5;
 		let model = glam::Mat4::from_translation(glam::vec3(0.5, -0.5, 0.0));
 		let cam_pos = glam::vec3(0.0, 0.0, -0.1);
-		let cam_rot = glam::Quat::IDENTITY;
+		let cam_rot = glam::Quat::from_rotation_z(self.rotation_angle.to_radians() as f32);
 		let cam_view = glam::Mat4::from_rotation_translation(-cam_rot, -cam_pos);
 		let ortho = glam::Mat4::orthographic_lh(0.0, CAMERA_WIDTH, -CAMERA_HEIGHT, 0.0, 0.1, 100.0);
 		let mvp = ortho * cam_view * model;
@@ -334,9 +352,16 @@ impl rulf_3d::DevLoop for DrawMap
 
 impl rulf_3d::InputEvent for DrawMap
 {
-	fn keyboard_input(&mut self, physical_key: winit::keyboard::PhysicalKey, state: winit::event::ElementState) 
+	fn keyboard_input(&mut self, keycode: winit::keyboard::KeyCode, state: winit::event::ElementState) 
 	{
-		println!("{physical_key:?}	{state:?}");
+		use winit::keyboard::KeyCode;
+
+		match keycode
+		{
+			KeyCode::ArrowLeft => self.input_left = state.is_pressed(),
+			KeyCode::ArrowRight => self.input_right = state.is_pressed(),
+			_ => ()
+		}
 	}
 }
 
