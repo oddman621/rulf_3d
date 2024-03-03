@@ -14,7 +14,6 @@ struct DrawMap
 	vertex_buffer: wgpu::Buffer,
 	instance_buffer: wgpu::Buffer,
 	render_pipeline: wgpu::RenderPipeline,
-	shader: wgpu::ShaderModule,
 	depth_texture: wgpu::Texture,
 	mvp_buffer: wgpu::Buffer,
 	bind_group: wgpu::BindGroup
@@ -22,39 +21,7 @@ struct DrawMap
 
 impl DrawMap
 {
-	// Doesn't neccesary
-	// const MAP_DATA: [u32; 156] = [
-	// 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-	// 	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
-	// 	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
-	// 	1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 
-	// 	1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 
-	// 	1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 
-	// 	1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 
-	// 	1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 
-	// 	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
-	// 	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
-	// 	1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 
-	// 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 
-	// ];
-	// const MAP_WIDTH: u32 = 13;
-	// const MAP_HEIGHT: u32 = 12;
-
-	// const MAP_WALLS: [[u32; 2]; 63] = [ // NOTE: Generate this data in actual code.
-	// 	[0,0], [0,1], [0,2], [0,3], [0,4], [0,5], [0,6], [0,7], [0,8], [0,9], [0,10], [0,11], [0,12],
-	// 	[1,0], 																				  [1,12],
-	// 	[2,0], 																				  [2,12],
-	// 	[3,0], 				 [3,3], [3,4], [3,5], 				[3,8], [3,9], [3,10], 		  [3,12],
-	// 	[4,0], 							   [4,5], 							  [4,10], 		  [4,12],
-	// 	[5,0], 							   [5,5], 							  [5,10], 		  [5,12],
-	// 	[6,0], 							   [6,5], 							  [6,10], 		  [6,12],
-	// 	[7,0], 				 [7,3], [7,4], [7,5], 											  [7,12],
-	// 	[8,0], 																				  [8,12],
-	// 	[9,0], 																				  [9,12],
-	// 	[10,0], 								  [10,6], 	   [10,8], 						  [10,12],
-	// 	[11,0], [11,1], [11,2], [11,3], [11,4], [11,5], [11,6], [11,7], [11,8], [11,9], [11,10], [11,11], [11,12],
-	// ];
-	const MAP_WALLS: [[u32; 2]; 63] = [
+	const MAP_WALLS: [[u32; 2]; 63] = [ 
 		[0,0], [1,0], [2,0], [3,0], [4,0], [5,0], [6,0], [7,0], [8,0], [9,0], [10,0], [11,0], [12,0], 
 		[0,1],																				  [12,1],
 		[0,2],																				  [12,2],
@@ -75,7 +42,7 @@ impl DrawMap
 		Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], uv: [0.0, 1.0] },
 		Vertex { position: [-0.5, 0.5, 0.0], color: [0.0, 1.0, 1.0], uv: [0.0, 0.0] },
 	];
-	//const QUAD_SHADER_SOURCE: &str = include_str!("shader/quad_instance.wgsl"); 
+	const QUAD_SHADER_SOURCE: &'static str = include_str!("shader/quad_instance.wgsl");
 
 }
 
@@ -116,7 +83,7 @@ impl rulf_3d::DevLoop for DrawMap
 			wgpu::ShaderModuleDescriptor
 			{
 				label: Some("DrawMap Quad Instance Shader Module"),
-				source: wgpu::ShaderSource::Wgsl(include_str!("shader/quad_instance.wgsl").into())
+				source: wgpu::ShaderSource::Wgsl(DrawMap::QUAD_SHADER_SOURCE.into())
 			}
 		);
 		let depth_texture = device.create_texture(
@@ -276,7 +243,6 @@ impl rulf_3d::DevLoop for DrawMap
 		vertex_buffer,
 		instance_buffer,
 		render_pipeline,
-		shader,
 		depth_texture,
 		mvp_buffer,
 		bind_group
