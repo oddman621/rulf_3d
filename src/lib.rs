@@ -6,7 +6,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-pub fn run_dev<T: DevLoop>()
+pub fn run_dev<T: DevLoop + InputEvent>()
 {
 	let engine = Engine::init();
     let _ = engine.dev_loop::<T>();
@@ -17,6 +17,14 @@ pub trait DevLoop
     fn init(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self;
     fn process(&mut self, delta: f64);
     fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface);
+}
+
+pub trait InputEvent
+{
+    fn keyboard_input(&mut self, physical_key: winit::keyboard::PhysicalKey, state: winit::event::ElementState);
+    //fn mouse_move_input(&mut self, position: winit::dpi::PhysicalPosition<f64>, relative: [f64; 2]);
+    //fn mouse_button_input(&mut self, button: winit::event::MouseButton, state: winit::event::ElementState);
+    //fn mouse_wheel_input(&mut self, delta: winit::event::MouseScrollDelta);
 }
 
 struct Engine
@@ -87,7 +95,7 @@ impl Engine
 		Self { event_loop, window, _instance: instance, surface, _adapter: adapter, device, queue, config }
 	}
 
-    fn dev_loop<T: DevLoop>(
+    fn dev_loop<T: DevLoop + InputEvent>(
         mut self,
     ) -> Result<(), winit::error::EventLoopError>
     {
@@ -103,6 +111,12 @@ impl Engine
                 Event::WindowEvent { event, window_id } if window_id == self.window.id() => 
                 match event 
                 {
+                    WindowEvent::KeyboardInput { event: winit::event::KeyEvent { physical_key, state, repeat, .. }, .. } 
+                    if repeat == false => devloop.keyboard_input(physical_key, state),
+                    //WindowEvent::MouseInput { state: _state, button: _button, .. } => (), // TODO
+                    //WindowEvent::CursorMoved { position: _position, .. } => (), // TODO
+                    //WindowEvent::AxisMotion { axis: _axis, value: _value, .. } =>(), // TODO
+                    //WindowEvent::MouseWheel { delta: _delta, .. } => (), // TODO
                     WindowEvent::RedrawRequested =>
                     {
                         // NOTE: draw things

@@ -332,6 +332,14 @@ impl rulf_3d::DevLoop for DrawMap
 	}
 }
 
+impl rulf_3d::InputEvent for DrawMap
+{
+	fn keyboard_input(&mut self, physical_key: winit::keyboard::PhysicalKey, state: winit::event::ElementState) 
+	{
+		println!("{physical_key:?}	{state:?}");
+	}
+}
+
 fn main()
 {
 	rulf_3d::run_dev::<DrawMap>();
