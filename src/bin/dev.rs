@@ -248,7 +248,7 @@ impl rulf_3d::DevLoop for DrawMap
 		bind_group
 		}
 	}
-    fn process(&mut self, delta: f64){}
+    fn process(&mut self, _delta: f64){}
     fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface)
 	{
 		let output = surface.get_current_texture().unwrap();
