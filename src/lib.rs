@@ -6,17 +6,17 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-pub fn run_dev(t: impl DevLoop)
+pub fn run_dev<T: DevLoop>()
 {
 	let engine = Engine::init();
-    let _ = engine.game_loop(t);
+    let _ = engine.dev_loop::<T>();
 }
 
 pub trait DevLoop
 {
-    fn startup(&mut self, device: &wgpu::Device, surface_format: wgpu::TextureFormat);
+    fn init(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self;
     fn process(&mut self, delta: f64);
-    fn render(&mut self, device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue);
+    fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface);
 }
 
 struct Engine
@@ -87,11 +87,13 @@ impl Engine
 		Self { event_loop, window, _instance: instance, surface, _adapter: adapter, device, queue, config }
 	}
 
-    fn game_loop(
+    fn dev_loop<T: DevLoop>(
         mut self,
-        mut t: impl DevLoop
     ) -> Result<(), winit::error::EventLoopError>
     {
+        // NOTE: init(startup) things
+        let mut devloop: T = T::init(&self.device, &self.queue, self.config.format);
+
         let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
         self.event_loop.run(
@@ -104,7 +106,7 @@ impl Engine
                     WindowEvent::RedrawRequested =>
                     {
                         // NOTE: draw things
-                        t.render(&self.device, &self.surface, &self.queue);
+                        devloop.render(&self.device, &self.queue, &self.surface);
                     },
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 => 
@@ -119,7 +121,6 @@ impl Engine
                 Event::NewEvents(StartCause::Init) =>
                 {
                     // NOTE: startup things
-                    t.startup(&self.device, self.config.format);
                 }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
@@ -130,7 +131,7 @@ impl Engine
                         last_process_tick = Instant::now(); // doing process point
                         
                         // NOTE: process things
-                        t.process(delta);
+                        devloop.process(delta);
 
                         self.window.request_redraw();
                     }
