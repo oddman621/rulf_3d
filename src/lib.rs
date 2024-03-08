@@ -6,14 +6,14 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-pub fn run_dev<T: DevLoop + InputEvent>()
+pub fn run<T: FrameworkLoop + InputEvent>()
 {
 	let engine = Engine::init();
-    let _ = engine.dev_loop::<T>();
+    let _ = engine.framework_loop::<T>();
 }
 
 #[allow(unused_variables)]
-pub trait DevLoop
+pub trait FrameworkLoop
 {
     fn init(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self;
     fn process(&mut self, delta: f64) {
@@ -106,7 +106,7 @@ impl Engine
 		Self { event_loop, window, _instance: instance, surface, _adapter: adapter, device, queue, config }
 	}
 
-    fn dev_loop<T: DevLoop + InputEvent>(
+    fn framework_loop<T: FrameworkLoop + InputEvent>(
         mut self,
     ) -> Result<(), winit::error::EventLoopError>
     {
