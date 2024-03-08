@@ -22,7 +22,7 @@ pub trait DevLoop
 pub trait InputEvent
 {
     fn keyboard_input(&mut self, keycode: winit::keyboard::KeyCode, state: winit::event::ElementState);
-    //fn mouse_move_input(&mut self, position: winit::dpi::PhysicalPosition<f64>, relative: [f64; 2]);
+    fn mouse_move_input(&mut self, position: glam::Vec2, relative: glam::Vec2);
     //fn mouse_button_input(&mut self, button: winit::event::MouseButton, state: winit::event::ElementState);
     //fn mouse_wheel_input(&mut self, delta: winit::event::MouseScrollDelta);
 }
@@ -104,6 +104,7 @@ impl Engine
 
         let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
+        let mut last_mouse_pos = glam::Vec2::default();
         self.event_loop.run(
             move |event, elwt| 
             match event 
@@ -114,7 +115,12 @@ impl Engine
                     WindowEvent::KeyboardInput { event: winit::event::KeyEvent { physical_key: winit::keyboard::PhysicalKey::Code(keycode), state, repeat, .. }, .. } 
                     if repeat == false => devloop.keyboard_input(keycode, state),
                     //WindowEvent::MouseInput { state: _state, button: _button, .. } => (), // TODO
-                    //WindowEvent::CursorMoved { position: _position, .. } => (), // TODO
+                    WindowEvent::CursorMoved { position, .. } => {
+                        let pos = glam::vec2(position.x as f32, position.y as f32);
+                        let rel = pos - last_mouse_pos;
+                        last_mouse_pos = pos;
+                        devloop.mouse_move_input(pos, rel);
+                    },
                     //WindowEvent::AxisMotion { axis: _axis, value: _value, .. } =>(), // TODO
                     //WindowEvent::MouseWheel { delta: _delta, .. } => (), // TODO
                     WindowEvent::RedrawRequested =>
