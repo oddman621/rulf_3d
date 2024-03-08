@@ -12,19 +12,30 @@ pub fn run_dev<T: DevLoop + InputEvent>()
     let _ = engine.dev_loop::<T>();
 }
 
+#[allow(unused_variables)]
 pub trait DevLoop
 {
     fn init(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self;
-    fn process(&mut self, delta: f64);
-    fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface);
+    fn process(&mut self, delta: f64) {
+
+    }
+    fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface) {
+
+    }
 }
 
+#[allow(unused_variables)]
 pub trait InputEvent
 {
-    fn keyboard_input(&mut self, keycode: winit::keyboard::KeyCode, state: winit::event::ElementState);
-    fn mouse_move_input(&mut self, position: glam::Vec2, relative: glam::Vec2);
-    //fn mouse_button_input(&mut self, button: winit::event::MouseButton, state: winit::event::ElementState);
-    //fn mouse_wheel_input(&mut self, delta: winit::event::MouseScrollDelta);
+    fn keyboard_input(&mut self, keycode: winit::keyboard::KeyCode, state: winit::event::ElementState) {
+
+    }
+    fn mouse_move_input(&mut self, position: glam::Vec2, relative: glam::Vec2) {
+
+    }
+    fn mouse_button_input(&mut self, button: winit::event::MouseButton, state: winit::event::ElementState) {
+
+    }
 }
 
 struct Engine
@@ -112,22 +123,20 @@ impl Engine
                 Event::WindowEvent { event, window_id } if window_id == self.window.id() => 
                 match event 
                 {
-                    WindowEvent::KeyboardInput { event: winit::event::KeyEvent { physical_key: winit::keyboard::PhysicalKey::Code(keycode), state, repeat, .. }, .. } 
-                    if repeat == false => devloop.keyboard_input(keycode, state),
-                    //WindowEvent::MouseInput { state: _state, button: _button, .. } => (), // TODO
+                    WindowEvent::KeyboardInput { 
+                        event: winit::event::KeyEvent { 
+                            physical_key: winit::keyboard::PhysicalKey::Code(keycode), 
+                            state, repeat: false, .. 
+                        }, .. 
+                    } => devloop.keyboard_input(keycode, state),
+                    WindowEvent::MouseInput { state, button, .. } => devloop.mouse_button_input(button, state),
                     WindowEvent::CursorMoved { position, .. } => {
                         let pos = glam::vec2(position.x as f32, position.y as f32);
                         let rel = pos - last_mouse_pos;
                         last_mouse_pos = pos;
                         devloop.mouse_move_input(pos, rel);
                     },
-                    //WindowEvent::AxisMotion { axis: _axis, value: _value, .. } =>(), // TODO
-                    //WindowEvent::MouseWheel { delta: _delta, .. } => (), // TODO
-                    WindowEvent::RedrawRequested =>
-                    {
-                        // NOTE: draw things
-                        devloop.render(&self.device, &self.queue, &self.surface);
-                    },
+                    WindowEvent::RedrawRequested => devloop.render(&self.device, &self.queue, &self.surface),
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 => 
                     {
