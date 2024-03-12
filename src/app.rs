@@ -41,11 +41,23 @@ impl FrameworkLoop for GameApp {
 		//common: view projection(self)
 		//wall_renderer: wall offsets(GameScene), grid size(GameScene)
 		//actor_renderer: actor pos(GameScene), actor angle(GameScene)
-		let wall_offsets: Vec<glam::UVec2> = self.scene.walls_offset().into_iter().collect();
 
-		let viewproj = glam::Mat4::orthographic_lh(-400.0, 400.0, -300.0, 300.0, -1.0, 100.0); //Must Change
+		let cam_pos = glam::Mat4::from_translation(glam::vec3(200.0, 200.0, 0.0));
+		let view = cam_pos.inverse();
+		let proj = glam::Mat4::orthographic_lh(-400.0, 400.0, -300.0, 300.0, -0.001, 1.0001);
+		let viewproj = proj * view; //Must Change
+		
+		// for wall rendering
+		let wall_offsets: Vec<glam::UVec2> = self.scene.walls_offset().into_iter().collect();
 		let gridsize = self.scene.tile_grid_size();
-		self.minimap_renderer.draw_walls(device, queue, surface, wall_offsets.as_slice(), &viewproj, &gridsize);
+
+		// for actors rendering
+		let actors_pos = self.scene.actors_position();
+		let actors_angle = self.scene.actors_angle();
+		let color = glam::vec3(0.2, 0.3, 0.1);
+
+		//self.minimap_renderer.draw_walls(device, queue, surface, wall_offsets.as_slice(), &viewproj, &gridsize);
+		self.minimap_renderer.draw_actors(device, queue, surface, actors_pos.as_slice(), actors_angle.as_slice(), &viewproj, &color);
 	}
 }
 

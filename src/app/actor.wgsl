@@ -22,7 +22,8 @@ fn vs_main(in_vert: VertexInput, in_inst: InstanceInput) -> VertexOutput {
 	var out: VertexOutput;
 	var rotated_vertex = vec2<f32>( in_vert.position.x * cos(in_inst.angle) - in_vert.position.y * sin(in_inst.angle),
 									in_vert.position.y * cos(in_inst.angle) + in_vert.position.x * sin(in_inst.angle) );
-	var pos = rotated_vertex + in_inst.position;
+	var rotated_scaled_vertex = rotated_vertex * 100.0;
+	var pos = rotated_scaled_vertex + in_inst.position; // TODO: size를 외부에서 받도록 수정
 
 	out.clip_position = view_proj * vec4<f32>(pos, in_vert.position.z, 1.0);
 	out.color = in_vert.color;
@@ -34,5 +35,6 @@ var<uniform> color: vec4<f32>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-	return vec4<f32>(color.rgb + in.color, color.a);
+	//return vec4<f32>(color.rgb + in.color, color.a);
+	return color;
 }
