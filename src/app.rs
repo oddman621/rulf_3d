@@ -32,18 +32,16 @@ impl FrameworkLoop for GameApp {
 			minimap_renderer: renderer::MiniMapRenderer::new(device, queue, surface_format) 
 		}
 	}
-	fn process(&mut self, _delta: f64) {
-		let _dir_input_vec = self.input.get_dir_input_vector();
-		let _mouse_rel_x = self.input.get_mouse_relative_x();
+	fn process(&mut self, delta: f64) {
+		let dir_input_vec = self.input.get_dir_input_vector();
+		let mouse_rel_x = self.input.get_mouse_relative_x();
+		self.scene.translate_player(dir_input_vec * 100.0 * delta as f32);
+		self.scene.rotate_player(mouse_rel_x.to_radians() * 10.0 * delta as f32);
 	}
 	fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface) {
-		// <2D MiniMap Rendering>
-		//common: view projection(self)
-		//wall_renderer: wall offsets(GameScene), grid size(GameScene)
-		//actor_renderer: actor pos(GameScene), actor angle(GameScene)
-
-		let cam_pos = glam::Mat4::from_translation(glam::vec3(200.0, 200.0, 0.0));
-		let view = cam_pos.inverse();
+		let cam_pos = glam::Mat4::from_translation(self.scene.get_player_position().extend(0.0));
+		let cam_rot = glam::Mat4::from_rotation_z(self.scene.get_player_angle());
+		let view = cam_rot.inverse() * cam_pos.inverse();
 		let proj = glam::Mat4::orthographic_lh(-400.0, 400.0, -300.0, 300.0, -0.001, 1.0001);
 		let viewproj = proj * view; //Must Change
 		

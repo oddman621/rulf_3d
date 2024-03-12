@@ -18,8 +18,8 @@ const QUAD_VERTICES: [Vertex; 4] = [
 ];
 
 const TRIANGLE_VERTICES: [Vertex; 3] = [
-	Vertex { position: glam::vec3(0.5, -0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 1.0) },
-	Vertex { position: glam::vec3(0.0, 0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.5, 0.0) },
+	Vertex { position: glam::vec3(0.5, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 0.5) },
+	Vertex { position: glam::vec3(-0.5, 0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 0.0) },
 	Vertex { position: glam::vec3(-0.5, -0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 1.0) }
 ];
 
@@ -387,17 +387,23 @@ impl MiniMapRenderer {
 						]
 					},
 					wgpu::VertexBufferLayout {
-						array_stride: std::mem::size_of::<glam::Vec2>() as u64 + std::mem::size_of::<f32>() as u64,
+						array_stride: std::mem::size_of::<glam::Vec2>() as u64,
 						step_mode: wgpu::VertexStepMode::Instance,
 						attributes: &[
 							wgpu::VertexAttribute {
 								format: wgpu::VertexFormat::Float32x2,
 								offset: 0,
 								shader_location: 3
-							},
+							}
+						]
+					},
+					wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<f32>() as u64,
+						step_mode: wgpu::VertexStepMode::Instance,
+						attributes: &[
 							wgpu::VertexAttribute {
 								format: wgpu::VertexFormat::Float32,
-								offset: std::mem::size_of::<glam::Vec2>() as u64,
+								offset: 0,
 								shader_location: 4
 							}
 						]
@@ -537,8 +543,6 @@ impl MiniMapRenderer {
 			}),
 			..Default::default()
 		});
-
-		//TODO: Make these to render bundle to execute outside?
 
 		render_pass.set_pipeline(&self.wall_render_pipeline);
 		render_pass.set_bind_group(0, &self.wall_bind_group, &[]);

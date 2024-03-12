@@ -64,6 +64,25 @@ impl GameWorld {
 	pub fn actors_angle(&self) -> Vec<f32> {
 		Vec::<f32>::from([self.player.angle])
 	}
+	pub fn get_player_position(&self) -> glam::Vec2 {
+		self.player.position
+	}
+	pub fn set_player_position(&mut self, pos: glam::Vec2) {
+		self.player.position = pos;
+	}
+	pub fn translate_player(&mut self, wishvec: glam::Vec2) {
+		self.player.position += wishvec;
+	}
+	pub fn get_player_angle(&self) -> f32 {
+		self.player.angle
+	}
+	pub fn set_player_angle(&mut self, ang: f32) {
+		self.player.angle = ang;
+	}
+	pub fn rotate_player(&mut self, wishang: f32) {
+		self.player.angle += wishang;
+	}
+
 }
 
 #[test]
@@ -84,7 +103,7 @@ struct Player {
 pub fn create_test_gameworld() -> GameWorld {
 	GameWorld {
 		tilemap: create_test_tilemap(),
-		player: Player { angle: 0.0, position: glam::vec2(500.0, 500.0) },
+		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0) },
 	}
 }
 
