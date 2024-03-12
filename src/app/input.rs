@@ -26,7 +26,7 @@ pub fn create_test_user_input() -> UserInput {
 	UserInput {
 		move_forward, move_backward, strafe_left, strafe_right, key_pressed_states,
 		mouse_position: glam::Vec2::default(),
-		mouse_relative: glam::Vec2::default(),
+		mouse_relative: glam::Vec2::ZERO,
 		mouse_left_pressed: false,
 		mouse_right_pressed: false
 	}
@@ -52,8 +52,10 @@ impl UserInput {
 	fn is_key_pressed(&self, keycode: &KeyCode) -> bool {
 		self.key_pressed_states.get(keycode).cloned().unwrap_or(false)
 	}
-	pub fn get_mouse_relative_x(&self) -> f32 {
-		self.mouse_relative.x
+	pub fn take_mouse_relative_x(&mut self) -> f32 {
+		let retval = self.mouse_relative.x;
+		self.mouse_relative = glam::Vec2::ZERO;
+		retval
 	}
 	pub fn get_dir_input_vector(&self) -> glam::Vec2 {
 		let y = if self.is_key_pressed(&self.move_forward) {1.0} else {0.0} + if self.is_key_pressed(&self.move_backward) {-1.0} else {0.0};

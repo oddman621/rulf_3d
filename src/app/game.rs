@@ -82,7 +82,9 @@ impl GameWorld {
 	pub fn rotate_player(&mut self, wishang: f32) {
 		self.player.angle += wishang;
 	}
-
+	pub fn get_player_forward_vector(&self) -> glam::Vec2 {
+		glam::Vec2::from_angle(self.player.angle).rotate(glam::Vec2::X)
+	}
 }
 
 #[test]

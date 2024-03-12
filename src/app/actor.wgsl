@@ -23,8 +23,6 @@ fn vs_main(in_vert: VertexInput, in_inst: InstanceInput) -> VertexOutput {
 	var rotated_vertex = vec2<f32>( in_vert.position.x * cos(in_inst.angle) - in_vert.position.y * sin(in_inst.angle),
 									in_vert.position.y * cos(in_inst.angle) + in_vert.position.x * sin(in_inst.angle) );
 	var pos = rotated_vertex * 50.0 + in_inst.position; // TODO: size를 외부에서 받도록 수정
-	//var pos = in_vert.position.xy * 50.0 + in_inst.position;
-	//var pos = in_vert.position.xy * 50.0;
 
 	out.clip_position = view_proj * vec4<f32>(pos, in_vert.position.z, 1.0);
 	out.color = in_vert.color;
