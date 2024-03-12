@@ -460,31 +460,6 @@ impl MiniMapRenderer {
 		}
 	}
 
-	pub fn clear(&self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface, 
-		color: &wgpu::Color
-	) {
-		let output = surface.get_current_texture().unwrap();
-		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("MiniMapRenderer::clear()"),
-			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-				view: &view,
-				resolve_target: None,
-				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(*color),
-					store: wgpu::StoreOp::Store
-				}
-			})],
-			..Default::default()
-		});
-
-		drop(render_pass);
-		queue.submit(Some(encoder.finish()));
-		output.present();
-	}
-
 	pub fn draw(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface,
 		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
 		wall_offsets: &[glam::UVec2], gridsize: &glam::Vec2,
