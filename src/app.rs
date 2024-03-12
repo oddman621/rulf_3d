@@ -45,7 +45,7 @@ impl FrameworkLoop for GameApp {
 		let cam_rot = glam::Mat4::from_rotation_z(-std::f32::consts::FRAC_PI_2 + self.scene.get_player_angle());
 		let view = cam_rot.inverse() * cam_pos.inverse();
 		let proj = glam::Mat4::orthographic_lh(-400.0, 400.0, -300.0, 300.0, -0.001, 1.0001);
-		let viewproj = proj * view; //Must Change
+		let viewproj = proj * view;
 		
 		// for wall rendering
 		let wall_offsets: Vec<glam::UVec2> = self.scene.walls_offset().into_iter().collect();

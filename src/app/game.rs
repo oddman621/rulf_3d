@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 enum TileType { Empty, Wall(u32) }
 
 enum Sky {
@@ -11,31 +12,15 @@ impl Default for Sky {
 }
 
 struct TileMap {
-	pub data: Vec<TileType>,
+	pub data: std::collections::BTreeMap<[u32; 2], TileType>,
 	pub width: u32,
 	pub height: u32,
 	pub grid_size: glam::Vec2
 }
 
-impl TileMap {
-	pub fn get_tile(&self, x: u32, y: u32) -> Option<&TileType> {
-		if x >= self.width || y >= self.width {
-			return None
-		}
-
-		let idx = y * self.width + x;
-
-		if idx + 1 >= self.width * self.height {
-			return None
-		}
-
-		Some(&self.data[idx as usize])
-	}
-}
-
 pub struct GameWorld {
 	tilemap: TileMap,
-	player: Player,
+	player: Player, //TODO: Traitize Player to Actor, use it both player and enemies
 	//sky: Sky,
 	//ground_color: glam::Vec3,
 	//show_minimap: bool,
@@ -46,13 +31,11 @@ pub struct GameWorld {
 	//gui: GUI
 }
 
-//wall_renderer: wall offsets(GameScene), grid size(GameScene)
-//actor_renderer: actor pos(GameScene), actor angle(GameScene)
 impl GameWorld {
 	pub fn walls_offset(&self) ->  std::collections::HashSet<glam::UVec2> {
-		self.tilemap.data.iter().enumerate().filter_map(|(idx, ty)| match ty {
+		self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
 			TileType::Empty => None,
-			TileType::Wall(_) => Some(glam::uvec2(idx as u32 % self.tilemap.width, idx as u32 / self.tilemap.width))
+			TileType::Wall(_) => Some(glam::uvec2(coord[0], coord[1]))
 		}).collect()
 	}
 	pub fn tile_grid_size(&self) -> glam::Vec2 {
@@ -121,10 +104,18 @@ fn create_test_tilemap() -> TileMap {
 		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0) 
 	];
 
+	let width = 8;
+	let height = 8;
+	let test_tilemap = TEST_TILEMAP.iter().enumerate().filter_map(|(idx, ty)|
+		Some(([idx as u32 % width, idx as u32 / width], *ty))
+	);
+
+	let _debug: Vec<([u32; 2], TileType)> = test_tilemap.clone().collect();
+
+	let data = std::collections::BTreeMap::<[u32; 2], TileType>::from_iter(test_tilemap);
+
 	TileMap {
-		data: Vec::<TileType>::from(TEST_TILEMAP),
-		width: 8,
-		height: 8,
+		data, width, height,
 		grid_size: glam::vec2(100.0, 100.0)
 	}
 }
