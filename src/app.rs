@@ -54,10 +54,9 @@ impl FrameworkLoop for GameApp {
 		// for actors rendering
 		let actors_pos = self.scene.actors_position();
 		let actors_angle = self.scene.actors_angle();
-		let color = glam::vec3(0.2, 0.3, 0.1);
+		let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 
-		//self.minimap_renderer.draw_walls(device, queue, surface, wall_offsets.as_slice(), &viewproj, &gridsize);
-		self.minimap_renderer.draw_actors(device, queue, surface, actors_pos.as_slice(), actors_angle.as_slice(), &viewproj, &color);
+		self.minimap_renderer.draw(device, queue, surface, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, wall_offsets.as_slice(), &gridsize, actors_pos.as_slice(), actors_angle.as_slice(), &actor_color);
 	}
 }
 

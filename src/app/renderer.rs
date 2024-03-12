@@ -25,7 +25,7 @@ const TRIANGLE_VERTICES: [Vertex; 3] = [
 
 
 
-
+//TODO: Remove unused fields?
 pub struct MiniMapRenderer {
 	wall_vb: wgpu::Buffer,
 	wall_pos_instb: wgpu::Buffer,
@@ -454,9 +454,35 @@ impl MiniMapRenderer {
 		}
 	}
 
-	pub fn draw_walls(&mut self,
-		device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface, 
-		wall_offsets: &[glam::UVec2], viewproj: &glam::Mat4, gridsize: &glam::Vec2
+	pub fn clear(&self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface, 
+		color: &wgpu::Color
+	) {
+		let output = surface.get_current_texture().unwrap();
+		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("MiniMapRenderer::clear()"),
+			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+				view: &view,
+				resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Clear(*color),
+					store: wgpu::StoreOp::Store
+				}
+			})],
+			..Default::default()
+		});
+
+		drop(render_pass);
+		queue.submit(Some(encoder.finish()));
+		output.present();
+	}
+
+	pub fn draw(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface,
+		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
+		wall_offsets: &[glam::UVec2], gridsize: &glam::Vec2,
+		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_color: &glam::Vec4
 	) {
 		let output = surface.get_current_texture().unwrap();
 		let size = output.texture.size();
@@ -485,70 +511,10 @@ impl MiniMapRenderer {
 		queue.write_buffer(&self.gridsize_ub, 0, bytemuck::cast_slice(&[*gridsize]));
 		queue.write_buffer(&self.wall_pos_instb, 0, bytemuck::cast_slice(wall_offsets));
 
-		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("MiniMapRenderer::draw_walls(..)"),
-			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-				view: &view,
-				resolve_target: None,
-				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}),
-					store: wgpu::StoreOp::Store
-				}
-			})],
-			depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-				view: &depth_texture_view,
-				depth_ops: Some(wgpu::Operations {
-					load: wgpu::LoadOp::Clear(1.0),
-					store: wgpu::StoreOp::Store
-				}),
-				stencil_ops: None
-			}),
-			..Default::default()
-		});
-
-		render_pass.set_pipeline(&self.wall_render_pipeline);
-		render_pass.set_bind_group(0, &self.wall_bind_group, &[]);
-		render_pass.set_vertex_buffer(0, self.wall_vb.slice(..));
-		render_pass.set_vertex_buffer(1, self.wall_pos_instb.slice(..));
-		render_pass.draw(0..4, 0..wall_offsets.len() as u32);
-
-		drop(render_pass);
-		queue.submit(Some(encoder.finish()));
-		output.present();
-	}
-
-	pub fn draw_actors(&mut self,
-		device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface, //TODO: Register these values to the struct.
-		actors_pos: &[glam::Vec2], actors_angle: &[f32], viewproj: &glam::Mat4, color: &glam::Vec3
-	) {
-		let output = surface.get_current_texture().unwrap();
-		let size = output.texture.size();
-		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-		if self.depth_texture.size() != size {
-			self.depth_texture.destroy();
-			self.depth_texture = device.create_texture(&wgpu::TextureDescriptor {
-				label: Some(format!("MiniMapRenderer::depth_texture ({}, {})", size.width, size.height).as_str()),
-				size: wgpu::Extent3d {
-					width: size.width,
-					height: size.height,
-					depth_or_array_layers: 1
-				},
-				mip_level_count: 1,
-				sample_count: 1,
-				dimension: wgpu::TextureDimension::D2,
-				format: wgpu::TextureFormat::Depth32Float,
-				usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-				view_formats: &[]
-			});
-		}
-		let depth_texture_view = self.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
-
 		queue.write_buffer(&self.actor_pos_instb, 0, bytemuck::cast_slice(actors_pos));
 		queue.write_buffer(&self.actor_ang_instb, 0, bytemuck::cast_slice(actors_angle));
 		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
-		queue.write_buffer(&self.color_ub, 0, bytemuck::cast_slice(&[glam::vec4(color.x, color.y, color.z, 1.0)]));
+		queue.write_buffer(&self.color_ub, 0, bytemuck::cast_slice(&[*actor_color]));
 
 		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -557,7 +523,7 @@ impl MiniMapRenderer {
 				view: &view,
 				resolve_target: None,
 				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(wgpu::Color {r: 0.3, g: 0.2, b: 0.1, a: 1.0}),
+					load: wgpu::LoadOp::Clear(*clear_color),
 					store: wgpu::StoreOp::Store
 				}
 			})],
@@ -573,6 +539,13 @@ impl MiniMapRenderer {
 		});
 
 		//TODO: Make these to render bundle to execute outside?
+
+		render_pass.set_pipeline(&self.wall_render_pipeline);
+		render_pass.set_bind_group(0, &self.wall_bind_group, &[]);
+		render_pass.set_vertex_buffer(0, self.wall_vb.slice(..));
+		render_pass.set_vertex_buffer(1, self.wall_pos_instb.slice(..));
+		render_pass.draw(0..4, 0..wall_offsets.len() as u32);
+
 		render_pass.set_pipeline(&self.actor_render_pipeline);
 		render_pass.set_vertex_buffer(0, self.actor_vb.slice(..));
 		render_pass.set_vertex_buffer(1, self.actor_pos_instb.slice(..));
