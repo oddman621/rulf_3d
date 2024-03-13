@@ -157,7 +157,7 @@ struct Player {
 pub fn create_test_gameworld() -> GameWorld {
 	GameWorld {
 		tilemap: create_test_tilemap(),
-		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), size_radius: 1.0 },
+		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), size_radius: 25.0 },
 	}
 }
 

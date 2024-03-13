@@ -11,10 +11,10 @@ pub struct Vertex {
 }
 
 const QUAD_VERTICES: [Vertex; 4] = [
-	Vertex { position: glam::vec3(0.5, -0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 1.0) },
-	Vertex { position: glam::vec3(0.5, 0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 0.0) },
-	Vertex { position: glam::vec3(-0.5, -0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 1.0) },
-	Vertex { position: glam::vec3(-0.5, 0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 0.0) }
+	Vertex { position: glam::vec3(1.0, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 1.0) },
+	Vertex { position: glam::vec3(1.0, 1.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 0.0) },
+	Vertex { position: glam::vec3(0.0, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 1.0) },
+	Vertex { position: glam::vec3(0.0, 1.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 0.0) }
 ];
 
 const TRIANGLE_VERTICES: [Vertex; 3] = [
