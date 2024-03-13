@@ -1,3 +1,5 @@
+mod collision;
+
 #[derive(Copy, Clone)]
 enum TileType { Empty, Wall(u32) }
 
@@ -16,6 +18,69 @@ struct TileMap {
 	pub width: u32,
 	pub height: u32,
 	pub grid_size: glam::Vec2
+}
+
+#[test]
+fn test_get_near_walls() {
+	let tilemap = create_test_tilemap();
+
+	assert!(tilemap.circle_collision_test(glam::vec2(60.0, 60.0), 50.0) == true);
+}
+
+impl TileMap {
+	fn get_tile(&self, coord: glam::UVec2) -> Option<&TileType> {
+		if coord.x >= self.width || coord.y >= self.height {
+			return None;
+		}
+		self.data.get(&[coord.x, coord.y])
+	}
+
+	fn point_to_tile_coord(&self, point: glam::Vec2) -> glam::UVec2 {
+		(point / self.grid_size).round().as_uvec2()
+	}
+	
+	/*
+	아이디어: 위치값 (f32, f32)를 반올림한 값은
+	해당 위치타일의 꼭짓점 4개중 1개에 붙게됨. 
+	그 꼭지점에 접한 4개의 타일에 대해 wall 체크 및 콜리전 검사 수행.
+	*/
+	fn get_near_walls_coord_from(&self, point: glam::Vec2) -> Vec<glam::UVec2> {
+		let mut retval = Vec::<glam::UVec2>::new();
+		if point.x < 0.0 || point.y < 0.0 {
+			return retval;
+		}
+		let glam::UVec2 {x, y} = self.point_to_tile_coord(point);
+		
+		//(x,y) (x-1,y) (x,y-1) (x-1,y-1)
+		retval.push(glam::uvec2(x, y)); // NOTE: 포함시킬 필요가 있나?
+		//NOTE: if문 생략해도 될까?
+		if x > 0 {
+			retval.push(glam::uvec2(x-1, y));
+		}
+		if y > 0 {
+			retval.push(glam::uvec2(x, y-1));
+		}
+		if x > 0 && y > 0 {
+			retval.push(glam::uvec2(x-1, y-1))
+		}
+
+		retval.into_iter().filter(|p| 
+			self.get_tile(*p).is_some_and(|f| 
+				match f {
+					TileType::Empty => false,
+					TileType::Wall(_) => true
+				}
+		)).collect()
+	}
+	pub fn circle_collision_test(&self, position: glam::Vec2, radius: f32) -> bool {
+		for wall_offset in self.get_near_walls_coord_from(position).into_iter().map(|f| f.as_vec2() * self.grid_size) {
+			let aabb = collision::AABB::from_rect(wall_offset, self.grid_size.x, self.grid_size.y);
+			if aabb.circle_collision(position, radius) {
+				return true;
+			}
+		}
+		false
+	}
 }
 
 pub struct GameWorld {
@@ -51,10 +116,12 @@ impl GameWorld {
 		self.player.position
 	}
 	pub fn set_player_position(&mut self, pos: glam::Vec2) {
-		self.player.position = pos;
+		if !self.tilemap.circle_collision_test(pos, self.player.size_radius) {
+			self.player.position = pos;
+		}
 	}
 	pub fn translate_player(&mut self, wishvec: glam::Vec2) {
-		self.player.position += wishvec;
+		self.set_player_position(self.player.position + wishvec);
 	}
 	pub fn get_player_angle(&self) -> f32 {
 		self.player.angle
@@ -70,6 +137,7 @@ impl GameWorld {
 	}
 }
 
+
 #[test]
 fn gameworld_walls_offset_test() {
 	let gameworld = create_test_gameworld();
@@ -82,13 +150,14 @@ fn gameworld_walls_offset_test() {
 #[derive(Default)]
 struct Player {
 	position: glam::Vec2,
-	angle: f32
+	angle: f32,
+	size_radius: f32,
 }
 
 pub fn create_test_gameworld() -> GameWorld {
 	GameWorld {
 		tilemap: create_test_tilemap(),
-		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0) },
+		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), size_radius: 1.0 },
 	}
 }
 
@@ -109,8 +178,6 @@ fn create_test_tilemap() -> TileMap {
 	let test_tilemap = TEST_TILEMAP.iter().enumerate().filter_map(|(idx, ty)|
 		Some(([idx as u32 % width, idx as u32 / width], *ty))
 	);
-
-	let _debug: Vec<([u32; 2], TileType)> = test_tilemap.clone().collect();
 
 	let data = std::collections::BTreeMap::<[u32; 2], TileType>::from_iter(test_tilemap);
 
