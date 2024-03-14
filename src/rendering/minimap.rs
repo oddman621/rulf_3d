@@ -1,7 +1,3 @@
-use wgpu::BlendState;
-
-
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
@@ -24,7 +20,7 @@ const TRIANGLE_VERTICES: [Vertex; 3] = [
 ];
 
 
-pub struct MiniMapRenderer {
+pub struct Renderer {
 	wall_vb: wgpu::Buffer,
 	wall_pos_instb: wgpu::Buffer,
 	actor_vb: wgpu::Buffer,
@@ -46,7 +42,7 @@ pub struct MiniMapRenderer {
 	actor_render_pipeline: wgpu::RenderPipeline
 }
 
-impl MiniMapRenderer {
+impl Renderer {
 	const MAX_WALL_INSTANCE: u64 = 512 * 512;
 	const MAX_ACTOR_INSTANCE: u64 = 512;
 
@@ -60,7 +56,7 @@ impl MiniMapRenderer {
 		queue.write_buffer(&wall_vb, 0, bytemuck::cast_slice(&QUAD_VERTICES));
 
 		let wall_pos_instb = device.create_buffer(&wgpu::BufferDescriptor{
-			label: Some(format!("MiniMapRenderer::wall_instb with size:{}", MiniMapRenderer::MAX_WALL_INSTANCE).as_str()),
+			label: Some(format!("MiniMapRenderer::wall_instb with size:{}", Self::MAX_WALL_INSTANCE).as_str()),
 			size: std::mem::size_of::<[u32; 2]>() as u64 * Self::MAX_WALL_INSTANCE,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
@@ -349,7 +345,7 @@ impl MiniMapRenderer {
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
 					format: surface_format,
-					blend: Some(BlendState::REPLACE),
+					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]
 			}),

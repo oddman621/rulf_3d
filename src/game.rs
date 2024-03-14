@@ -1,4 +1,51 @@
-mod collision;
+//
+// Collision
+//
+
+pub struct AABB {
+	pub left: f32, pub right: f32, pub top: f32, pub bottom: f32
+}
+
+impl AABB {
+	pub fn from_rect(position: glam::Vec2, width: f32, height: f32) -> Self {
+		Self {
+			left: position.x,
+			right: position.x + width,
+			top: position.y + height,
+			bottom: position.y
+		}
+	}
+
+	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> bool {
+		let test_x;
+		let test_y;
+		
+		if position.x < self.left {
+			 test_x = self.left;
+		} else if position.x > self.right {
+			test_x = self.right;
+		} else {
+			test_x = position.x;
+		}
+	
+		if position.y > self.top {
+			test_y = self.top;
+		} else if position.y < self.bottom {
+			test_y = self.bottom;
+		} else {
+			test_y = position.y;
+		}
+
+		let closest_dist_squared = glam::vec2(position.x-test_x, position.y-test_y).length_squared();
+		let radius_squared = radius.powi(2);
+		closest_dist_squared <= radius_squared // int squared comparison instead of sqrt for performance
+	}
+}
+
+//
+// Collision End
+//
+
 
 #[derive(Copy, Clone)]
 enum TileType { Empty, Wall(u32) }
@@ -89,9 +136,9 @@ impl TileMap {
 				}
 		)).collect()
 	}
-	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> Option<collision::AABB> {
+	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> Option<AABB> {
 		for wall_offset in self.get_near_walls_coord_from(position).into_iter().map(|f| f.as_vec2() * self.grid_size) {
-			let aabb = collision::AABB::from_rect(wall_offset, self.grid_size.x, self.grid_size.y);
+			let aabb = AABB::from_rect(wall_offset, self.grid_size.x, self.grid_size.y);
 			if aabb.circle_collision_check(position, radius) {
 				return Some(aabb);
 			}
@@ -158,13 +205,6 @@ impl GameWorld {
 	pub fn translate_player(&mut self, wishvec: glam::Vec2) {
 		self.set_player_position(self.player.position + wishvec);
 	}
-	// Hide(comment) because it's unused.
-	// pub fn get_player_angle(&self) -> f32 {
-	// 	self.player.angle
-	// }
-	// pub fn set_player_angle(&mut self, ang: f32) {
-	// 	self.player.angle = ang;
-	// }
 	pub fn rotate_player(&mut self, wishang: f32) {
 		self.player.angle += wishang;
 	}
