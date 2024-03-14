@@ -8,11 +8,10 @@ pub mod minimap;
 
 pub struct WebGPU
 {
-	//TODO: 테스트를 위해 임시로 pub... 나중에 다시 private하게 처리할 것
 	pub surface: wgpu::Surface<'static>,
 	pub device: wgpu::Device,
 	pub queue: wgpu::Queue,
-	config: wgpu::SurfaceConfiguration
+	pub config: wgpu::SurfaceConfiguration
 }
 
 
@@ -23,11 +22,7 @@ impl WebGPU {
 		self.config.height = std::cmp::min(height, max_texture_extent);
 		self.surface.configure(&self.device, &self.config);
 	}
-
-	pub fn get_surface_format(&self) -> wgpu::TextureFormat {
-		self.config.format
-	}
-
+	
 	pub fn new(window: Arc<Window>) -> Self {
 		let window_size = window.inner_size();
 		let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());

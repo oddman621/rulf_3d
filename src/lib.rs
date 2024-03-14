@@ -54,7 +54,7 @@ impl Rulf3D {
 	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
 		let mut rulf3d = Self::new();
 		let mut input_state = input::InputState::default();
-		let mut minimap_renderer = rendering::minimap::Renderer::new(&rulf3d.webgpu.device, &rulf3d.webgpu.queue, rulf3d.webgpu.get_surface_format());
+		let mut minimap_renderer = rendering::minimap::Renderer::new(&rulf3d.webgpu.device, &rulf3d.webgpu.queue, rulf3d.webgpu.config.format);
 		let mut game_world = game::GameWorld::test_gameworld();
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
