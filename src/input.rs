@@ -22,16 +22,18 @@ pub struct InputState {
 
 impl Default for InputState {
 	fn default() -> Self {
-		let mut key_binding = HashMap::new();
-		let mut action_state = HashMap::new();
+		let key_binding = HashMap::new();
+		let action_state = HashMap::new();
 		let mouse_state = MouseState::default();
 
-		key_binding.insert(KeyCode::KeyW, Action::MoveForward);
-		key_binding.insert(KeyCode::KeyS, Action::MoveBackward);
-		key_binding.insert(KeyCode::KeyA, Action::StrafeLeft);
-		key_binding.insert(KeyCode::KeyD, Action::StrafeRight);
+		let mut input_state = Self {key_binding, action_state, mouse_state};
 
-		Self {key_binding, action_state, mouse_state}
+		input_state.bind_key(KeyCode::KeyW, Action::MoveForward);
+		input_state.bind_key(KeyCode::KeyS, Action::MoveBackward);
+		input_state.bind_key(KeyCode::KeyA, Action::StrafeLeft);
+		input_state.bind_key(KeyCode::KeyD, Action::StrafeRight);
+
+		input_state
 	}
 }
 
@@ -42,7 +44,7 @@ impl InputState {
 
 	pub fn set_key_state(&mut self, key: KeyCode, pressed: bool) {
 		if let Some(action) = self.key_binding.get(&key) {
-			self.action_state.insert(*action, pressed);
+			self.set_action_state(*action, pressed);
 		}
 	}
 
