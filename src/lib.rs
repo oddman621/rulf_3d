@@ -71,21 +71,20 @@ impl Rulf3D {
 						physical_key: winit::keyboard::PhysicalKey::Code(keycode), 
 						state, repeat: false, .. 
 					}, .. } => input_state.set_key_state(keycode, state.is_pressed()),
-                    // WindowEvent::MouseInput { state, button, .. } => {
-					// 	match button {
-					// 		//TODO: MouseButton
-					// 		//winit::event::MouseButton::Left => self.mouse_left_pressed = state.is_pressed(),
-					// 		//winit::event::MouseButton::Right => self.mouse_right_pressed = state.is_pressed(),
-					// 		_ => ()
-					// 	};
-					// },
+                    WindowEvent::MouseInput { state, button, .. } => {
+						match button {
+							winit::event::MouseButton::Left => input_state.set_mouse_left_pressed(state.is_pressed()),
+							winit::event::MouseButton::Right => input_state.set_mouse_right_pressed(state.is_pressed()),
+							_ => ()
+						};
+					},
                     WindowEvent::CursorMoved { position, .. } => {
                         let pos = glam::vec2(position.x as f32, position.y as f32);
                         let rel = pos - last_mouse_pos;
                         last_mouse_pos = pos;
                         input_state.set_mouse_x_relative(rel.x);
                     },
-                    WindowEvent::RedrawRequested => {/* TODO: Render */
+                    WindowEvent::RedrawRequested => {
 						let cam_pos = glam::Mat4::from_translation(game_world.get_player_position().extend(0.0));
 						let cam_rot = glam::Mat4::IDENTITY;//glam::Mat4::from_rotation_z(-std::f32::consts::FRAC_PI_2 + self.scene.get_player_angle());
 						let view = cam_rot.inverse() * cam_pos.inverse();
@@ -109,10 +108,9 @@ impl Rulf3D {
 					=> rulf3d.webgpu.reconfigure_surface_size(physical_size.width, physical_size.height),
                     _ => ()
                 },
-                Event::NewEvents(StartCause::Init) =>
-                {
-                    // TODO: startup things
-                }
+                // Event::NewEvents(StartCause::Init) =>{
+                //     // NOTE: startup things
+                // }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
                     let last_process_time = Instant::now().duration_since(last_process_tick);

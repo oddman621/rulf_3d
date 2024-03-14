@@ -4,27 +4,34 @@ use winit::keyboard::KeyCode;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Action {
-	MoveForward, MoveBackward, StrafeLeft, StrafeRight, TurnLeft, TurnRight
+	MoveForward, MoveBackward, StrafeLeft, StrafeRight//, TurnLeft, TurnRight
+}
+
+#[derive(Default)]
+struct MouseState {
+	pub relative_x: f32,
+	pub left_pressed: bool,
+	pub right_pressed: bool
 }
 
 pub struct InputState {
 	key_binding: HashMap<KeyCode, Action>,
 	action_state: HashMap<Action, bool>,
-	mouse_x_relative: f32
+	mouse_state: MouseState
 }
 
 impl Default for InputState {
 	fn default() -> Self {
 		let mut key_binding = HashMap::new();
 		let mut action_state = HashMap::new();
-		let mouse_x_relative = 0.0;
+		let mouse_state = MouseState::default();
 
 		key_binding.insert(KeyCode::KeyW, Action::MoveForward);
 		key_binding.insert(KeyCode::KeyS, Action::MoveBackward);
 		key_binding.insert(KeyCode::KeyA, Action::StrafeLeft);
 		key_binding.insert(KeyCode::KeyD, Action::StrafeRight);
 
-		Self {key_binding, action_state, mouse_x_relative}
+		Self {key_binding, action_state, mouse_state}
 	}
 }
 
@@ -55,11 +62,18 @@ impl InputState {
 	}
 
 	pub fn set_mouse_x_relative(&mut self, rel: f32) {
-		self.mouse_x_relative = rel;
+		self.mouse_state.relative_x = rel;
 	}
 	pub fn take_mouse_x_relative(&mut self) -> f32 {
-		let rel = self.mouse_x_relative;
-		self.mouse_x_relative = 0.0;
+		let rel = self.mouse_state.relative_x;
+		self.mouse_state.relative_x = 0.0;
 		rel
+	}
+
+	pub fn set_mouse_left_pressed(&mut self, pressed: bool) {
+		self.mouse_state.left_pressed = pressed;
+	}
+	pub fn set_mouse_right_pressed(&mut self, pressed: bool) {
+		self.mouse_state.right_pressed = pressed;
 	}
 }
