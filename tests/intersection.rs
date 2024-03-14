@@ -1,20 +1,4 @@
 
-struct Circle {
-	position: glam::Vec2,
-	radius: f32
-}
-
-struct Rectangle {
-	left: f32, right: f32, bottom: f32, top: f32
-}
-
-impl Rectangle {
-	fn point_collision(&self, point: glam::Vec2) -> bool {
-		let x_in_range = self.left <= point.x && self.right >= point.x;
-		let y_in_range = self.bottom <= point.y && self.top >= point.y;
-		x_in_range && y_in_range
-	}
-}
 
 struct ConvexPolygon {
 	vertices: Vec<glam::Vec2>,
@@ -44,11 +28,6 @@ impl ConvexPolygon {
 		}
 
 		segloop
-	}
-
-	fn circle_collision(&self, point: glam::Vec2, radius: f32) -> bool {
-
-		todo!("circle collision returns bool")
 	}
 }
 

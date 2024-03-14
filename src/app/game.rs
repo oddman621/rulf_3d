@@ -1,12 +1,10 @@
-use wgpu::naga::proc::ensure_block_returns;
-
 mod collision;
 
 #[derive(Copy, Clone)]
 enum TileType { Empty, Wall(u32) }
 
 enum Sky {
-	Texture(u32), SolidColor(glam::Vec3)
+	/*Texture(u32), hide(comment) because of unused, for now*/ SolidColor(glam::Vec3)
 }
 
 impl Default for Sky {
@@ -137,12 +135,13 @@ impl GameWorld {
 	pub fn translate_player(&mut self, wishvec: glam::Vec2) {
 		self.set_player_position(self.player.position + wishvec);
 	}
-	pub fn get_player_angle(&self) -> f32 {
-		self.player.angle
-	}
-	pub fn set_player_angle(&mut self, ang: f32) {
-		self.player.angle = ang;
-	}
+	// Hide(comment) because it's unused.
+	// pub fn get_player_angle(&self) -> f32 {
+	// 	self.player.angle
+	// }
+	// pub fn set_player_angle(&mut self, ang: f32) {
+	// 	self.player.angle = ang;
+	// }
 	pub fn rotate_player(&mut self, wishang: f32) {
 		self.player.angle += wishang;
 	}
