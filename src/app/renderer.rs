@@ -24,8 +24,6 @@ const TRIANGLE_VERTICES: [Vertex; 3] = [
 ];
 
 
-
-//TODO: Remove unused fields?
 pub struct MiniMapRenderer {
 	wall_vb: wgpu::Buffer,
 	wall_pos_instb: wgpu::Buffer,
@@ -35,9 +33,9 @@ pub struct MiniMapRenderer {
 	viewproj_ub: wgpu::Buffer,
 	gridsize_ub: wgpu::Buffer,
 	color_ub: wgpu::Buffer,
-	wall_texture: wgpu::Texture,
-	wall_texture_view: wgpu::TextureView,
-	texture_sampler: wgpu::Sampler,
+	_wall_texture: wgpu::Texture,
+	_wall_texture_view: wgpu::TextureView,
+	_texture_sampler: wgpu::Sampler,
 
 	wall_bind_group: wgpu::BindGroup,
 	actor_bind_group: wgpu::BindGroup,
@@ -449,9 +447,9 @@ impl MiniMapRenderer {
 			viewproj_ub,
 			gridsize_ub,
 			color_ub,
-			wall_texture,
-			wall_texture_view,
-			texture_sampler,
+			_wall_texture: wall_texture,
+			_wall_texture_view: wall_texture_view,
+			_texture_sampler: texture_sampler,
 			wall_bind_group,
 			actor_bind_group,
 			depth_texture,
