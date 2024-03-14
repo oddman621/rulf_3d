@@ -1,3 +1,5 @@
+use super::WebGPU;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
@@ -46,63 +48,63 @@ impl Renderer {
 	const MAX_WALL_INSTANCE: u64 = 512 * 512;
 	const MAX_ACTOR_INSTANCE: u64 = 512;
 
-	pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self {
-		let wall_vb = device.create_buffer(&wgpu::BufferDescriptor {
+	pub fn new(webgpu: &WebGPU) -> Self {
+		let wall_vb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::wall_vb"),
 			size: std::mem::size_of_val(&QUAD_VERTICES) as u64,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		queue.write_buffer(&wall_vb, 0, bytemuck::cast_slice(&QUAD_VERTICES));
+		webgpu.queue.write_buffer(&wall_vb, 0, bytemuck::cast_slice(&QUAD_VERTICES));
 
-		let wall_pos_instb = device.create_buffer(&wgpu::BufferDescriptor{
+		let wall_pos_instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
 			label: Some(format!("MiniMapRenderer::wall_instb with size:{}", Self::MAX_WALL_INSTANCE).as_str()),
 			size: std::mem::size_of::<[u32; 2]>() as u64 * Self::MAX_WALL_INSTANCE,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let actor_vb = device.create_buffer(&wgpu::BufferDescriptor {
+		let actor_vb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::actor_vb"),
 			size: std::mem::size_of_val(&TRIANGLE_VERTICES) as u64,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		queue.write_buffer(&actor_vb, 0, bytemuck::cast_slice(&TRIANGLE_VERTICES));
+		webgpu.queue.write_buffer(&actor_vb, 0, bytemuck::cast_slice(&TRIANGLE_VERTICES));
 
-		let actor_pos_instb = device.create_buffer(&wgpu::BufferDescriptor {
+		let actor_pos_instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::actor_pos_instb"),
 			size: std::mem::size_of::<[f32; 2]>() as u64 * Self::MAX_ACTOR_INSTANCE,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let actor_ang_instb = device.create_buffer(&wgpu::BufferDescriptor {
+		let actor_ang_instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::actor_ang_instb"),
 			size: std::mem::size_of::<[f32; 2]>() as u64 * Self::MAX_ACTOR_INSTANCE,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let viewproj_ub = device.create_buffer(&wgpu::BufferDescriptor{
+		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
 			label: Some("MiniMapRenderer::viewproj_ub"),
 			size: std::mem::size_of::<glam::Mat4>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let gridsize_ub = device.create_buffer(&wgpu::BufferDescriptor {
+		let gridsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::gridsize_ub"),
 			size: std::mem::size_of::<[f32; 2]>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let color_ub = device.create_buffer(&wgpu::BufferDescriptor {
+		let color_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::color_ub"),
 			size: std::mem::size_of::<glam::Vec4>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
+		let depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("MiniMapRenderer::depth_texture"),
 			size: wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
 			mip_level_count: 1,
@@ -119,7 +121,7 @@ impl Renderer {
 			height: wall_image.height(),
 			depth_or_array_layers: 1
 		};
-		let wall_texture = device.create_texture(&wgpu::TextureDescriptor {
+		let wall_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
 				label: Some("MiniMapRenderer::wall_texture"),
 				size: wall_image_size,
 				mip_level_count: 1,
@@ -129,7 +131,7 @@ impl Renderer {
 				usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
 				view_formats: &[]
 		});
-		queue.write_texture(
+		webgpu.queue.write_texture(
 			wgpu::ImageCopyTexture {
 				texture: &wall_texture,
 				aspect: wgpu::TextureAspect::All,
@@ -143,7 +145,7 @@ impl Renderer {
 				rows_per_image: None
 			}, 
 			wall_image_size);
-		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor {
 			label: Some("MiniMapRenderer::texture_sampler"),
 			address_mode_u: wgpu::AddressMode::Repeat,
 			address_mode_v: wgpu::AddressMode::Repeat,
@@ -155,7 +157,7 @@ impl Renderer {
 		});
 		let wall_texture_view = wall_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-		let wall_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let wall_bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("MiniMapRenderer wall bind group layout"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry { //view projection mat4x4
@@ -197,7 +199,7 @@ impl Renderer {
 			]
 		});
 
-		let actor_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let actor_bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("MiniMapRenderer actor bind group layout"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry { //view projection mat4x4
@@ -223,7 +225,7 @@ impl Renderer {
 			]
 		});
 
-		let wall_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+		let wall_bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("MiniMapRenderer::wall_bind_group"),
 			layout: &wall_bind_group_layout,
 			entries: &[
@@ -246,7 +248,7 @@ impl Renderer {
 			]
 		});
 
-		let actor_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+		let actor_bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("MiniMapRenderer::actor_bind_group"),
 			layout: &actor_bind_group_layout,
 			entries: &[
@@ -261,28 +263,28 @@ impl Renderer {
 			]
 		});
 
-		let wall_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
+		let wall_pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
 			label: Some("MiniMapRenderer wall pipeline layout"),
 			bind_group_layouts: &[&wall_bind_group_layout],
 			push_constant_ranges: &[]
 		});
-		let actor_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { 
+		let actor_pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { 
 			label: Some("MiniMapRenderer actor pipeline layout"),
 			bind_group_layouts: &[&actor_bind_group_layout],
 			push_constant_ranges: &[]
 		});
 
-		let wall_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let wall_shader = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("MiniMapRenderer wall shader module"),
 			source: wgpu::ShaderSource::Wgsl(include_str!("wall.wgsl").into())
 		});
-		let actor_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let actor_shader = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("MiniMapRenderer actor shader module"),
 			source: wgpu::ShaderSource::Wgsl(include_str!("actor.wgsl").into())
 		});
 		
 
-		let wall_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+		let wall_render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("MiniMapRenderer::wall_render_pipeline"),
 			layout: Some(&wall_pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -344,7 +346,7 @@ impl Renderer {
 				module: &wall_shader,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: surface_format,
+					format: webgpu.config.format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]
@@ -352,7 +354,7 @@ impl Renderer {
 			multiview: None
 		});
 
-		let actor_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
+		let actor_render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
 			label: Some("MiniMapRenderer::actor_render_pipeline"),
 			layout: Some(&actor_pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -425,7 +427,7 @@ impl Renderer {
 				module: &actor_shader,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: surface_format,
+					format: webgpu.config.format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]
@@ -454,18 +456,18 @@ impl Renderer {
 		}
 	}
 
-	pub fn draw(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface,
+	pub fn draw(&mut self, webgpu: &WebGPU,
 		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
 		wall_offsets: &[glam::UVec2], gridsize: &glam::Vec2,
 		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_color: &glam::Vec4
 	) {
-		let output = surface.get_current_texture().unwrap();
+		let output = webgpu.surface.get_current_texture().unwrap();
 		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
 		if self.depth_texture.size() != size {
 			self.depth_texture.destroy();
-			self.depth_texture = device.create_texture(&wgpu::TextureDescriptor {
+			self.depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
 				label: Some(format!("MiniMapRenderer::depth_texture ({}, {})", size.width, size.height).as_str()),
 				size: wgpu::Extent3d {
 					width: size.width,
@@ -482,16 +484,16 @@ impl Renderer {
 		}
 		let depth_texture_view = self.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
-		queue.write_buffer(&self.gridsize_ub, 0, bytemuck::cast_slice(&[*gridsize]));
-		queue.write_buffer(&self.wall_pos_instb, 0, bytemuck::cast_slice(wall_offsets));
+		webgpu.queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
+		webgpu.queue.write_buffer(&self.gridsize_ub, 0, bytemuck::cast_slice(&[*gridsize]));
+		webgpu.queue.write_buffer(&self.wall_pos_instb, 0, bytemuck::cast_slice(wall_offsets));
 
-		queue.write_buffer(&self.actor_pos_instb, 0, bytemuck::cast_slice(actors_pos));
-		queue.write_buffer(&self.actor_ang_instb, 0, bytemuck::cast_slice(actors_angle));
-		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
-		queue.write_buffer(&self.color_ub, 0, bytemuck::cast_slice(&[*actor_color]));
+		webgpu.queue.write_buffer(&self.actor_pos_instb, 0, bytemuck::cast_slice(actors_pos));
+		webgpu.queue.write_buffer(&self.actor_ang_instb, 0, bytemuck::cast_slice(actors_angle));
+		webgpu.queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
+		webgpu.queue.write_buffer(&self.color_ub, 0, bytemuck::cast_slice(&[*actor_color]));
 
-		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("MiniMapRenderer::draw_actors()"),
 			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -527,7 +529,7 @@ impl Renderer {
 		render_pass.draw(0..3, 0..actors_pos.len() as u32);
 
 		drop(render_pass);
-		queue.submit(Some(encoder.finish()));
+		webgpu.queue.submit(Some(encoder.finish()));
 		output.present();
 	}
 }

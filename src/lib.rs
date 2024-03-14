@@ -54,7 +54,7 @@ impl Rulf3D {
 	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
 		let mut rulf3d = Self::new();
 		let mut input_state = input::InputState::default();
-		let mut minimap_renderer = rendering::minimap::Renderer::new(&rulf3d.webgpu.device, &rulf3d.webgpu.queue, rulf3d.webgpu.config.format);
+		let mut minimap_renderer = rendering::minimap::Renderer::new(&rulf3d.webgpu);
 		let mut game_world = game::GameWorld::test_gameworld();
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
@@ -99,7 +99,7 @@ impl Rulf3D {
 						let actors_pos = game_world.actors_position();
 						let actors_angle = game_world.actors_angle();
 						let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
-						minimap_renderer.draw(&rulf3d.webgpu.device, &rulf3d.webgpu.queue, &rulf3d.webgpu.surface,
+						minimap_renderer.draw(&rulf3d.webgpu,
 							&wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, wall_offsets.as_slice(), 
 							&gridsize, actors_pos.as_slice(), actors_angle.as_slice(), &actor_color);
 					},

@@ -8,10 +8,10 @@ pub mod minimap;
 
 pub struct WebGPU
 {
-	pub surface: wgpu::Surface<'static>,
-	pub device: wgpu::Device,
-	pub queue: wgpu::Queue,
-	pub config: wgpu::SurfaceConfiguration
+	surface: wgpu::Surface<'static>,
+	device: wgpu::Device,
+	queue: wgpu::Queue,
+	config: wgpu::SurfaceConfiguration
 }
 
 
