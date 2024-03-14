@@ -31,6 +31,7 @@ pub struct Renderer {
 	viewproj_ub: wgpu::Buffer,
 	gridsize_ub: wgpu::Buffer,
 	color_ub: wgpu::Buffer,
+	actorsize_ub: wgpu::Buffer,
 	_wall_texture: wgpu::Texture,
 	_wall_texture_view: wgpu::TextureView,
 	_texture_sampler: wgpu::Sampler,
@@ -94,6 +95,12 @@ impl Renderer {
 		let gridsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("MiniMapRenderer::gridsize_ub"),
 			size: std::mem::size_of::<[f32; 2]>() as u64,
+			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
+		let actorsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("MiniMapRenderer::actorsize_ub"),
+			size: std::mem::size_of::<f32>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
@@ -212,8 +219,18 @@ impl Renderer {
 					},
 					count: None
 				},
-				wgpu::BindGroupLayoutEntry { //color
+				wgpu::BindGroupLayoutEntry {
 					binding: 1,
+					visibility: wgpu::ShaderStages::VERTEX,
+					ty: wgpu::BindingType::Buffer {
+						ty: wgpu::BufferBindingType::Uniform,
+						has_dynamic_offset: false,
+						min_binding_size: None
+					},
+					count: None
+				},
+				wgpu::BindGroupLayoutEntry { //color
+					binding: 2,
 					visibility: wgpu::ShaderStages::FRAGMENT,
 					ty: wgpu::BindingType::Buffer {
 						ty: wgpu::BufferBindingType::Uniform,
@@ -258,6 +275,10 @@ impl Renderer {
 				},
 				wgpu::BindGroupEntry {
 					binding: 1,
+					resource: actorsize_ub.as_entire_binding()
+				},
+				wgpu::BindGroupEntry {
+					binding: 2,
 					resource: color_ub.as_entire_binding()
 				}
 			]
@@ -444,6 +465,7 @@ impl Renderer {
 			actor_ang_instb,
 			viewproj_ub,
 			gridsize_ub,
+			actorsize_ub,
 			color_ub,
 			_wall_texture: wall_texture,
 			_wall_texture_view: wall_texture_view,
@@ -459,7 +481,7 @@ impl Renderer {
 	pub fn draw(&mut self, webgpu: &WebGPU,
 		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
 		wall_offsets: &[glam::UVec2], gridsize: &glam::Vec2,
-		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_color: &glam::Vec4
+		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_size: f32, actor_color: &glam::Vec4
 	) {
 		let output = webgpu.surface.get_current_texture().unwrap();
 		let size = output.texture.size();
@@ -491,6 +513,7 @@ impl Renderer {
 		webgpu.queue.write_buffer(&self.actor_pos_instb, 0, bytemuck::cast_slice(actors_pos));
 		webgpu.queue.write_buffer(&self.actor_ang_instb, 0, bytemuck::cast_slice(actors_angle));
 		webgpu.queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
+		webgpu.queue.write_buffer(&self.actorsize_ub, 0, bytemuck::cast_slice(&[actor_size]));
 		webgpu.queue.write_buffer(&self.color_ub, 0, bytemuck::cast_slice(&[*actor_color]));
 
 		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());

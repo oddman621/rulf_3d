@@ -101,7 +101,7 @@ impl Rulf3D {
 						let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 						minimap_renderer.draw(&rulf3d.webgpu,
 							&wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, wall_offsets.as_slice(), 
-							&gridsize, actors_pos.as_slice(), actors_angle.as_slice(), &actor_color);
+							&gridsize, actors_pos.as_slice(), actors_angle.as_slice(), 50.0f32, &actor_color);
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 
