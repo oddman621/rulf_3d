@@ -34,7 +34,7 @@ fn vs_main(
 }
 
 @group(0) @binding(2)
-var texture: texture_2d<f32>;
+var texture: texture_2d<f32>; //TODO: Get textures as array for verieties of walls.
 
 @group(0) @binding(3)
 var texture_sampler: sampler;
