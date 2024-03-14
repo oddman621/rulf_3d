@@ -5,7 +5,7 @@
 
 
 pub struct AABB {
-	left: f32, right: f32, top: f32, bottom: f32
+	pub left: f32, pub right: f32, pub top: f32, pub bottom: f32
 }
 
 impl AABB {
@@ -18,7 +18,7 @@ impl AABB {
 		}
 	}
 
-	pub fn circle_collision(&self, position: glam::Vec2, radius: f32) -> bool {
+	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> bool {
 		let test_x;
 		let test_y;
 		
@@ -37,7 +37,7 @@ impl AABB {
 		} else {
 			test_y = position.y;
 		}
-	
+
 		let closest_dist_squared = glam::vec2(position.x-test_x, position.y-test_y).length_squared();
 		let radius_squared = radius.powi(2);
 		closest_dist_squared <= radius_squared // int squared comparison instead of sqrt for performance

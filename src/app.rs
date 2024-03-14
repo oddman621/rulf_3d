@@ -42,7 +42,7 @@ impl FrameworkLoop for GameApp {
 	}
 	fn render(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, surface: &wgpu::Surface) {
 		let cam_pos = glam::Mat4::from_translation(self.scene.get_player_position().extend(0.0));
-		let cam_rot = glam::Mat4::from_rotation_z(-std::f32::consts::FRAC_PI_2 + self.scene.get_player_angle());
+		let cam_rot = glam::Mat4::IDENTITY;//glam::Mat4::from_rotation_z(-std::f32::consts::FRAC_PI_2 + self.scene.get_player_angle());
 		let view = cam_rot.inverse() * cam_pos.inverse();
 		let proj = glam::Mat4::orthographic_lh(-400.0, 400.0, -300.0, 300.0, -0.001, 1.0001);
 		let viewproj = proj * view;

@@ -1,3 +1,5 @@
+use wgpu::naga::proc::ensure_block_returns;
+
 mod collision;
 
 #[derive(Copy, Clone)]
@@ -24,7 +26,7 @@ struct TileMap {
 fn test_get_near_walls() {
 	let tilemap = create_test_tilemap();
 
-	assert!(tilemap.circle_collision_test(glam::vec2(60.0, 60.0), 50.0) == true);
+	assert!(tilemap.circle_collision_check(glam::vec2(60.0, 60.0), 50.0).is_some());
 }
 
 impl TileMap {
@@ -72,14 +74,14 @@ impl TileMap {
 				}
 		)).collect()
 	}
-	pub fn circle_collision_test(&self, position: glam::Vec2, radius: f32) -> bool {
+	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> Option<collision::AABB> {
 		for wall_offset in self.get_near_walls_coord_from(position).into_iter().map(|f| f.as_vec2() * self.grid_size) {
 			let aabb = collision::AABB::from_rect(wall_offset, self.grid_size.x, self.grid_size.y);
-			if aabb.circle_collision(position, radius) {
-				return true;
+			if aabb.circle_collision_check(position, radius) {
+				return Some(aabb);
 			}
 		}
-		false
+		None
 	}
 }
 
@@ -116,8 +118,20 @@ impl GameWorld {
 		self.player.position
 	}
 	pub fn set_player_position(&mut self, pos: glam::Vec2) {
-		if !self.tilemap.circle_collision_test(pos, self.player.size_radius) {
-			self.player.position = pos;
+		match self.tilemap.circle_collision_check(pos, self.player.radius) {
+			None => self.player.position = pos,
+			Some(_) => { // Try move along axis
+				let wishvec = pos - self.player.position;
+				let proj_x = wishvec.project_onto(glam::Vec2::X);
+				let proj_y = wishvec.project_onto(glam::Vec2::Y);
+
+				if self.tilemap.circle_collision_check(self.player.position + proj_x, self.player.radius).is_none() {
+					self.player.position += proj_x;
+				}
+				else if self.tilemap.circle_collision_check(self.player.position + proj_y, self.player.radius).is_none() {
+					self.player.position += proj_y;
+				}
+			}
 		}
 	}
 	pub fn translate_player(&mut self, wishvec: glam::Vec2) {
@@ -151,13 +165,13 @@ fn gameworld_walls_offset_test() {
 struct Player {
 	position: glam::Vec2,
 	angle: f32,
-	size_radius: f32,
+	radius: f32,
 }
 
 pub fn create_test_gameworld() -> GameWorld {
 	GameWorld {
 		tilemap: create_test_tilemap(),
-		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), size_radius: 25.0 },
+		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), radius: 25.0 },
 	}
 }
 
