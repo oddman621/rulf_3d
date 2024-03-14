@@ -27,8 +27,8 @@ impl InputEvent for GameApp {
 impl FrameworkLoop for GameApp {
 	fn init(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) -> Self {
 		GameApp { 
-			scene: game::create_test_gameworld(), 
-			input: input::create_test_user_input(), 
+			scene: game::GameWorld::test_gameworld(), 
+			input: input::UserInput::basic_userinput(), 
 			minimap_renderer: renderer::MiniMapRenderer::new(device, queue, surface_format) 
 		}
 	}

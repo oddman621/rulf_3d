@@ -12,23 +12,25 @@ pub struct UserInput { // do some with Scene
 	mouse_right_pressed: bool
 }
 
-pub fn create_test_user_input() -> UserInput {
-	let move_forward = KeyCode::KeyW;
-	let move_backward = KeyCode::KeyS;
-	let strafe_left = KeyCode::KeyA;
-	let strafe_right = KeyCode::KeyD;
-	let mut key_pressed_states = std::collections::HashMap::new();
-	key_pressed_states.insert(move_forward, false);
-	key_pressed_states.insert(move_backward, false);
-	key_pressed_states.insert(strafe_left, false);
-	key_pressed_states.insert(strafe_right, false);
+impl UserInput {
+	pub fn basic_userinput() -> Self {
+		let move_forward = KeyCode::KeyW;
+		let move_backward = KeyCode::KeyS;
+		let strafe_left = KeyCode::KeyA;
+		let strafe_right = KeyCode::KeyD;
+		let mut key_pressed_states = std::collections::HashMap::new();
+		key_pressed_states.insert(move_forward, false);
+		key_pressed_states.insert(move_backward, false);
+		key_pressed_states.insert(strafe_left, false);
+		key_pressed_states.insert(strafe_right, false);
 
-	UserInput {
-		move_forward, move_backward, strafe_left, strafe_right, key_pressed_states,
-		mouse_position: glam::Vec2::default(),
-		mouse_relative: glam::Vec2::ZERO,
-		mouse_left_pressed: false,
-		mouse_right_pressed: false
+		UserInput {
+			move_forward, move_backward, strafe_left, strafe_right, key_pressed_states,
+			mouse_position: glam::Vec2::default(),
+			mouse_relative: glam::Vec2::ZERO,
+			mouse_left_pressed: false,
+			mouse_right_pressed: false
+		}	
 	}
 }
 

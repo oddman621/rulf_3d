@@ -20,12 +20,34 @@ struct TileMap {
 	pub grid_size: glam::Vec2
 }
 
-#[test]
-fn test_get_near_walls() {
-	let tilemap = create_test_tilemap();
+impl TileMap {
+	pub fn test_tilemap() -> Self {
+		const TEST_TILEMAP: [TileType; 64] = [
+		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), 
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
+		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0) 
+		];
 
-	assert!(tilemap.circle_collision_check(glam::vec2(60.0, 60.0), 50.0).is_some());
+		let width = 8;
+		let height = 8;
+		let test_tilemap = TEST_TILEMAP.iter().enumerate().filter_map(|(idx, ty)|
+			Some(([idx as u32 % width, idx as u32 / width], *ty))
+		);
+
+		let data = std::collections::BTreeMap::<[u32; 2], TileType>::from_iter(test_tilemap);
+
+		TileMap {
+			data, width, height,
+			grid_size: glam::vec2(100.0, 100.0)
+		}
+	}
 }
+
 
 impl TileMap {
 	fn get_tile(&self, coord: glam::UVec2) -> Option<&TileType> {
@@ -39,11 +61,6 @@ impl TileMap {
 		(point / self.grid_size).round().as_uvec2()
 	}
 	
-	/*
-	아이디어: 위치값 (f32, f32)를 반올림한 값은
-	해당 위치타일의 꼭짓점 4개중 1개에 붙게됨. 
-	그 꼭지점에 접한 4개의 타일에 대해 wall 체크 및 콜리전 검사 수행.
-	*/
 	fn get_near_walls_coord_from(&self, point: glam::Vec2) -> Vec<glam::UVec2> {
 		let mut retval = Vec::<glam::UVec2>::new();
 		if point.x < 0.0 || point.y < 0.0 {
@@ -52,7 +69,7 @@ impl TileMap {
 		let glam::UVec2 {x, y} = self.point_to_tile_coord(point);
 		
 		//(x,y) (x-1,y) (x,y-1) (x-1,y-1)
-		retval.push(glam::uvec2(x, y)); // NOTE: 포함시킬 필요가 있나?
+		retval.push(glam::uvec2(x, y));
 		//NOTE: if문 생략해도 될까?
 		if x > 0 {
 			retval.push(glam::uvec2(x-1, y));
@@ -85,7 +102,7 @@ impl TileMap {
 
 pub struct GameWorld {
 	tilemap: TileMap,
-	player: Player, //TODO: Traitize Player to Actor, use it both player and enemies
+	player: Object,
 	//sky: Sky,
 	//ground_color: glam::Vec3,
 	//show_minimap: bool,
@@ -97,6 +114,12 @@ pub struct GameWorld {
 }
 
 impl GameWorld {
+	pub fn test_gameworld() -> Self {
+		GameWorld {
+			tilemap: TileMap::test_tilemap(),
+			player: Object { angle: 0.0, position: glam::vec2(200.0, 200.0), radius: 25.0 },
+		}
+	}
 	pub fn walls_offset(&self) ->  std::collections::HashSet<glam::UVec2> {
 		self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
 			TileType::Empty => None,
@@ -151,51 +174,28 @@ impl GameWorld {
 }
 
 
-#[test]
-fn gameworld_walls_offset_test() {
-	let gameworld = create_test_gameworld();
-	let walls_offset = gameworld.walls_offset();
-	assert!(walls_offset.get(&glam::uvec2(0, 0)).is_some());
-	assert!(walls_offset.get(&glam::uvec2(1, 1)).is_none());
-	assert!(walls_offset.get(&glam::uvec2(7, 7)).is_some());
-}
-
 #[derive(Default)]
-struct Player {
+struct Object {
 	position: glam::Vec2,
 	angle: f32,
 	radius: f32,
 }
 
-pub fn create_test_gameworld() -> GameWorld {
-	GameWorld {
-		tilemap: create_test_tilemap(),
-		player: Player { angle: 0.0, position: glam::vec2(200.0, 200.0), radius: 25.0 },
-	}
+
+
+
+#[test]
+fn test_get_near_walls() {
+	let tilemap = TileMap::test_tilemap();
+
+	assert!(tilemap.circle_collision_check(glam::vec2(60.0, 60.0), 50.0).is_some());
 }
 
-fn create_test_tilemap() -> TileMap {
-	const TEST_TILEMAP: [TileType; 64] = [
-		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), 
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0) 
-	];
-
-	let width = 8;
-	let height = 8;
-	let test_tilemap = TEST_TILEMAP.iter().enumerate().filter_map(|(idx, ty)|
-		Some(([idx as u32 % width, idx as u32 / width], *ty))
-	);
-
-	let data = std::collections::BTreeMap::<[u32; 2], TileType>::from_iter(test_tilemap);
-
-	TileMap {
-		data, width, height,
-		grid_size: glam::vec2(100.0, 100.0)
-	}
+#[test]
+fn gameworld_walls_offset_test() {
+	let gameworld = GameWorld::test_gameworld();
+	let walls_offset = gameworld.walls_offset();
+	assert!(walls_offset.get(&glam::uvec2(0, 0)).is_some());
+	assert!(walls_offset.get(&glam::uvec2(1, 1)).is_none());
+	assert!(walls_offset.get(&glam::uvec2(7, 7)).is_some());
 }
