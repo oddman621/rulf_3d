@@ -92,7 +92,9 @@ impl Rulf3D {
 						let viewproj = proj * view;
 						
 						// for wall rendering
-						let wall_offsets: Vec<glam::UVec2> = game_world.walls_offset().into_iter().collect();
+						//let wall_offsets: Vec<glam::UVec2> = game_world.walls_offset().into_iter().collect();
+                        let walls: Vec<u32> = game_world.get_walls().into_iter().flat_map(|(uvec, id)| 
+                            {[uvec.x, uvec.y, id]}).collect();
 						let gridsize = game_world.tile_grid_size();
 
 						// for actors rendering
@@ -100,7 +102,7 @@ impl Rulf3D {
 						let actors_angle = game_world.actors_angle();
 						let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 						minimap_renderer.draw(&rulf3d.webgpu,
-							&wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, wall_offsets.as_slice(), 
+							&wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, walls.as_slice(), 
 							&gridsize, actors_pos.as_slice(), actors_angle.as_slice(), 50.0f32, &actor_color);
 					},
                     WindowEvent::CloseRequested => elwt.exit(),

@@ -50,16 +50,6 @@ impl AABB {
 #[derive(Copy, Clone)]
 enum TileType { Empty, Wall(u32) }
 
-enum Sky {
-	/*Texture(u32), hide(comment) because of unused, for now*/ SolidColor(glam::Vec3)
-}
-
-impl Default for Sky {
-	fn default() -> Self {
-		Sky::SolidColor(glam::vec3(0.1, 0.3, 0.2))
-	}
-}
-
 struct TileMap {
 	pub data: std::collections::BTreeMap<[u32; 2], TileType>,
 	pub width: u32,
@@ -70,14 +60,14 @@ struct TileMap {
 impl TileMap {
 	pub fn test_tilemap() -> Self {
 		const TEST_TILEMAP: [TileType; 64] = [
-		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), 
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(0),
-		TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0), TileType::Wall(0) 
+		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0), 
+		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
+		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(2),
+		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3),
+		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3),
+		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(2),
+		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
+		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0) 
 		];
 
 		let width = 8;
@@ -150,14 +140,9 @@ impl TileMap {
 pub struct GameWorld {
 	tilemap: TileMap,
 	player: Object,
-	//sky: Sky,
-	//ground_color: glam::Vec3,
-	//show_minimap: bool,
-	//paused: bool,
-	//doors: BtreeMap<[f32;2], Door>
-	//statics: BtreeMap<[f32;2], Static>
+	//doors: BtreeMap<[u32;2], Door>
+	//statics: BtreeMap<[u32;2], Static>
 	//enemies: BtreeMap<[f32;2], Enemy>
-	//gui: GUI
 }
 
 impl GameWorld {
@@ -167,10 +152,10 @@ impl GameWorld {
 			player: Object { angle: 0.0, position: glam::vec2(200.0, 200.0), radius: 25.0 },
 		}
 	}
-	pub fn walls_offset(&self) ->  std::collections::HashSet<glam::UVec2> {
+	pub fn get_walls(&self) -> std::collections::HashMap<glam::UVec2, u32> {
 		self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
 			TileType::Empty => None,
-			TileType::Wall(_) => Some(glam::uvec2(coord[0], coord[1]))
+			TileType::Wall(id) => Some((glam::uvec2(coord[0], coord[1]), id.clone()))
 		}).collect()
 	}
 	pub fn tile_grid_size(&self) -> glam::Vec2 {
@@ -234,8 +219,8 @@ fn test_get_near_walls() {
 #[test]
 fn gameworld_walls_offset_test() {
 	let gameworld = GameWorld::test_gameworld();
-	let walls_offset = gameworld.walls_offset();
-	assert!(walls_offset.get(&glam::uvec2(0, 0)).is_some());
-	assert!(walls_offset.get(&glam::uvec2(1, 1)).is_none());
-	assert!(walls_offset.get(&glam::uvec2(7, 7)).is_some());
+	let walls = gameworld.get_walls();
+	assert!(walls.get(&glam::uvec2(0, 0)).is_some());
+	assert!(walls.get(&glam::uvec2(1, 1)).is_none());
+	assert!(walls.get(&glam::uvec2(7, 7)).is_some());
 }

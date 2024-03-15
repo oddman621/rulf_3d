@@ -24,7 +24,7 @@ const TRIANGLE_VERTICES: [Vertex; 3] = [
 
 pub struct Renderer {
 	wall_vb: wgpu::Buffer,
-	wall_pos_instb: wgpu::Buffer,
+	wall_instb: wgpu::Buffer,
 	actor_vb: wgpu::Buffer,
 	actor_pos_instb: wgpu::Buffer,
 	actor_ang_instb: wgpu::Buffer,
@@ -32,8 +32,8 @@ pub struct Renderer {
 	gridsize_ub: wgpu::Buffer,
 	color_ub: wgpu::Buffer,
 	actorsize_ub: wgpu::Buffer,
-	_wall_texture: wgpu::Texture,
-	_wall_texture_view: wgpu::TextureView,
+	_wall_texture_array: wgpu::Texture,
+	_wall_texture_array_view: wgpu::TextureView,
 	_texture_sampler: wgpu::Sampler,
 
 	wall_bind_group: wgpu::BindGroup,
@@ -58,9 +58,9 @@ impl Renderer {
 		});
 		webgpu.queue.write_buffer(&wall_vb, 0, bytemuck::cast_slice(&QUAD_VERTICES));
 
-		let wall_pos_instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
+		let wall_instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
 			label: Some(format!("MiniMapRenderer::wall_instb with size:{}", Self::MAX_WALL_INSTANCE).as_str()),
-			size: std::mem::size_of::<[u32; 2]>() as u64 * Self::MAX_WALL_INSTANCE,
+			size: (std::mem::size_of::<[u32; 2]>() as u64 + std::mem::size_of::<u32>() as u64) * Self::MAX_WALL_INSTANCE,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
@@ -122,36 +122,7 @@ impl Renderer {
 			view_formats: &[]
 		});
 
-		let wall_image = image::load_from_memory(include_bytes!("Bricks069_32.jpg")).unwrap();
-		let wall_image_size = wgpu::Extent3d {
-			width: wall_image.width(),
-			height: wall_image.height(),
-			depth_or_array_layers: 1
-		};
-		let wall_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
-				label: Some("MiniMapRenderer::wall_texture"),
-				size: wall_image_size,
-				mip_level_count: 1,
-				sample_count: 1,
-				dimension: wgpu::TextureDimension::D2,
-				format: wgpu::TextureFormat::Rgba8UnormSrgb,
-				usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-				view_formats: &[]
-		});
-		webgpu.queue.write_texture(
-			wgpu::ImageCopyTexture {
-				texture: &wall_texture,
-				aspect: wgpu::TextureAspect::All,
-				mip_level: 0,
-				origin: wgpu::Origin3d::ZERO
-			}, 
-			&wall_image.to_rgba8(), 
-			wgpu::ImageDataLayout {
-				offset: 0,
-				bytes_per_row: Some(4 * wall_image_size.width),
-				rows_per_image: None
-			}, 
-			wall_image_size);
+		
 		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor {
 			label: Some("MiniMapRenderer::texture_sampler"),
 			address_mode_u: wgpu::AddressMode::Repeat,
@@ -162,7 +133,103 @@ impl Renderer {
 			mipmap_filter: wgpu::FilterMode::Nearest,
 			..Default::default()
 		});
-		let wall_texture_view = wall_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+		let wall_array_image = image::load_from_memory(include_bytes!("array_texture.png")).unwrap();
+		let wall_array_image_size = wgpu::Extent3d {
+			width: wall_array_image.width(), height: wall_array_image.height() / 4, depth_or_array_layers: 4
+		};
+		//let wall_array_image_offset = wall_array_image_size.width * wall_array_image_size.height * 4/*bytes per texel */;
+		let wall_texture_array = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+			label: Some("MiniMapRenderer::wall_texture_array"),
+			size: wall_array_image_size,
+			mip_level_count: 1,
+			sample_count: 1,
+			dimension: wgpu::TextureDimension::D2,
+			format: wgpu::TextureFormat::Rgba8UnormSrgb,
+			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+			view_formats: &[]
+		});
+		let wall_texture_array_view = wall_texture_array.create_view(&wgpu::TextureViewDescriptor {
+			dimension: Some(wgpu::TextureViewDimension::D2Array),
+			..Default::default()
+		});
+		webgpu.queue.write_texture(
+			wgpu::ImageCopyTexture {
+				texture: &wall_texture_array,
+				aspect: wgpu::TextureAspect::All,
+				mip_level: 0,
+				origin: wgpu::Origin3d::ZERO
+			}, 
+			&wall_array_image.to_rgba8(), 
+			wgpu::ImageDataLayout {
+				//offset: 0,
+				bytes_per_row: Some(4 * wall_array_image_size.width),
+				rows_per_image: Some(wall_array_image_size.height),
+				..Default::default()
+			}, 
+			wgpu::Extent3d {
+				width: wall_array_image_size.width, height: wall_array_image_size.height, depth_or_array_layers: 1
+			}
+		);
+		
+		// WTF: wgpu::ImageDataLayout.offset seems be ommitted when 2 or more queue.write_texture() to same texture_array.
+
+		webgpu.queue.write_texture(
+			wgpu::ImageCopyTexture {
+				texture: &wall_texture_array,
+				aspect: wgpu::TextureAspect::All,
+				mip_level: 0,
+				origin: wgpu::Origin3d::ZERO
+			}, 
+			&wall_array_image.to_rgba8(), 
+			wgpu::ImageDataLayout {
+				//offset: 0,//wall_array_image_offset as u64 * 4,
+				bytes_per_row: Some(4 * wall_array_image_size.width),
+				rows_per_image: Some(wall_array_image_size.height), // Error if it is None when using 2 or more crate_texture() to same texture.
+				..Default::default()
+			}, 
+			wgpu::Extent3d {
+				width: wall_array_image_size.width, height: wall_array_image_size.height, depth_or_array_layers: 2
+			}
+		);
+
+		webgpu.queue.write_texture(
+			wgpu::ImageCopyTexture {
+				texture: &wall_texture_array,
+				aspect: wgpu::TextureAspect::All,
+				mip_level: 0,
+				origin: wgpu::Origin3d::ZERO
+			}, 
+			&wall_array_image.to_rgba8(), 
+			wgpu::ImageDataLayout {
+				//offset: 0,//wall_array_image_offset as u64 * 4 * 2,
+				bytes_per_row: Some(4 * wall_array_image_size.width),
+				rows_per_image: Some(wall_array_image_size.height),
+				..Default::default()
+			}, 
+			wgpu::Extent3d {
+				width: wall_array_image_size.width, height: wall_array_image_size.height, depth_or_array_layers: 3
+			}
+		);
+
+		webgpu.queue.write_texture(
+			wgpu::ImageCopyTexture {
+				texture: &wall_texture_array,
+				aspect: wgpu::TextureAspect::All,
+				mip_level: 0,
+				origin: wgpu::Origin3d::ZERO
+			}, 
+			&wall_array_image.to_rgba8(), 
+			wgpu::ImageDataLayout {
+				//offset: 0,//wall_array_image_offset as u64 * 4 * 3,
+				bytes_per_row: Some(4 * wall_array_image_size.width),
+				rows_per_image: Some(wall_array_image_size.height),
+				..Default::default()
+			}, 
+			wgpu::Extent3d {
+				width: wall_array_image_size.width, height: wall_array_image_size.height, depth_or_array_layers: 4
+			}
+		);
 
 		let wall_bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("MiniMapRenderer wall bind group layout"),
@@ -187,12 +254,12 @@ impl Renderer {
 					},
 					count: None
 				},
-				wgpu::BindGroupLayoutEntry { // Texture for Wall
+				wgpu::BindGroupLayoutEntry { // TextureArray for Wall
 					binding: 2,
 					visibility: wgpu::ShaderStages::FRAGMENT,
 					ty: wgpu::BindingType::Texture {
 						sample_type: wgpu::TextureSampleType::Float { filterable: true },
-						view_dimension: wgpu::TextureViewDimension::D2,
+						view_dimension: wgpu::TextureViewDimension::D2Array,
 						multisampled: false
 					},
 					count: None
@@ -256,7 +323,7 @@ impl Renderer {
 				},
 				wgpu::BindGroupEntry {
 					binding: 2,
-					resource: wgpu::BindingResource::TextureView(&wall_texture_view)
+					resource: wgpu::BindingResource::TextureView(&wall_texture_array_view)
 				},
 				wgpu::BindGroupEntry {
 					binding: 3,
@@ -334,13 +401,18 @@ impl Renderer {
 						]
 					},
 					wgpu::VertexBufferLayout {
-						array_stride: std::mem::size_of::<[u32; 2]>() as u64,
+						array_stride: std::mem::size_of::<[u32; 2]>() as u64 + std::mem::size_of::<u32>() as u64,
 						step_mode: wgpu::VertexStepMode::Instance,
 						attributes: &[
 							wgpu::VertexAttribute {
 								format: wgpu::VertexFormat::Uint32x2,
 								offset: 0,
 								shader_location: 3
+							},
+							wgpu::VertexAttribute {
+								format: wgpu::VertexFormat::Uint32,
+								offset: std::mem::size_of::<[u32;2]>() as u64,
+								shader_location: 4
 							}
 						]
 					}
@@ -459,7 +531,7 @@ impl Renderer {
 
 		Self {
 			wall_vb,
-			wall_pos_instb,
+			wall_instb,
 			actor_vb,
 			actor_pos_instb,
 			actor_ang_instb,
@@ -467,8 +539,8 @@ impl Renderer {
 			gridsize_ub,
 			actorsize_ub,
 			color_ub,
-			_wall_texture: wall_texture,
-			_wall_texture_view: wall_texture_view,
+			_wall_texture_array: wall_texture_array,
+			_wall_texture_array_view: wall_texture_array_view,
 			_texture_sampler: texture_sampler,
 			wall_bind_group,
 			actor_bind_group,
@@ -480,7 +552,7 @@ impl Renderer {
 
 	pub fn draw(&mut self, webgpu: &WebGPU,
 		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
-		wall_offsets: &[glam::UVec2], gridsize: &glam::Vec2,
+		walls: &[u32], gridsize: &glam::Vec2,
 		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_size: f32, actor_color: &glam::Vec4
 	) {
 		let output = webgpu.surface.get_current_texture().unwrap();
@@ -508,7 +580,7 @@ impl Renderer {
 
 		webgpu.queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
 		webgpu.queue.write_buffer(&self.gridsize_ub, 0, bytemuck::cast_slice(&[*gridsize]));
-		webgpu.queue.write_buffer(&self.wall_pos_instb, 0, bytemuck::cast_slice(wall_offsets));
+		webgpu.queue.write_buffer(&self.wall_instb, 0, bytemuck::cast_slice(walls));
 
 		webgpu.queue.write_buffer(&self.actor_pos_instb, 0, bytemuck::cast_slice(actors_pos));
 		webgpu.queue.write_buffer(&self.actor_ang_instb, 0, bytemuck::cast_slice(actors_angle));
@@ -541,8 +613,8 @@ impl Renderer {
 		render_pass.set_pipeline(&self.wall_render_pipeline);
 		render_pass.set_bind_group(0, &self.wall_bind_group, &[]);
 		render_pass.set_vertex_buffer(0, self.wall_vb.slice(..));
-		render_pass.set_vertex_buffer(1, self.wall_pos_instb.slice(..));
-		render_pass.draw(0..4, 0..wall_offsets.len() as u32);
+		render_pass.set_vertex_buffer(1, self.wall_instb.slice(..));
+		render_pass.draw(0..4, 0..(walls.len() as u32 / 3));
 
 		render_pass.set_pipeline(&self.actor_render_pipeline);
 		render_pass.set_vertex_buffer(0, self.actor_vb.slice(..));
