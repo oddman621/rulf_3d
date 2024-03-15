@@ -12,14 +12,14 @@ struct VertexInput {
 
 struct InstanceInput {
 	@location(3) pos_offset: vec2<u32>,
-	@location(4) texid: u32 // !
+	@location(4) texid: u32
 }
 
 struct VertexOutput {
 	@builtin(position) clip_position: vec4<f32>,
 	@location(0) color: vec3<f32>,
 	@location(1) uv: vec2<f32>,
-	@location(2) layer: u32 // !
+	@location(2) layer: u32
 }
 
 @vertex
@@ -37,8 +37,7 @@ fn vs_main(
 }
 
 @group(0) @binding(2)
-//var texture: texture_2d<f32>; //TODO: Get textures as array for verieties of walls.
-var texture_array: texture_2d_array<f32>; // !
+var texture_array: texture_2d_array<f32>;
 
 @group(0) @binding(3)
 var texture_sampler: sampler;
