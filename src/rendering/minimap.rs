@@ -153,6 +153,9 @@ impl Renderer {
 			dimension: Some(wgpu::TextureViewDimension::D2Array),
 			..Default::default()
 		});
+
+		// WTF: wgpu::ImageDataLayout.offset seems be ommitted when 2 or more queue.write_texture() to same texture_array.
+
 		webgpu.queue.write_texture(
 			wgpu::ImageCopyTexture {
 				texture: &wall_texture_array,
@@ -172,8 +175,6 @@ impl Renderer {
 			}
 		);
 		
-		// WTF: wgpu::ImageDataLayout.offset seems be ommitted when 2 or more queue.write_texture() to same texture_array.
-
 		webgpu.queue.write_texture(
 			wgpu::ImageCopyTexture {
 				texture: &wall_texture_array,
