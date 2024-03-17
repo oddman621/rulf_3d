@@ -54,7 +54,7 @@ struct TileMap {
 	pub data: std::collections::BTreeMap<[u32; 2], TileType>,
 	pub width: u32,
 	pub height: u32,
-	pub grid_size: glam::Vec2
+	pub grid_size: f32
 }
 
 impl TileMap {
@@ -80,7 +80,7 @@ impl TileMap {
 
 		TileMap {
 			data, width, height,
-			grid_size: glam::vec2(100.0, 100.0)
+			grid_size: 100.0
 		}
 	}
 }
@@ -128,7 +128,7 @@ impl TileMap {
 	}
 	pub fn circle_collision_check(&self, position: glam::Vec2, radius: f32) -> Option<AABB> {
 		for wall_offset in self.get_near_walls_coord_from(position).into_iter().map(|f| f.as_vec2() * self.grid_size) {
-			let aabb = AABB::from_rect(wall_offset, self.grid_size.x, self.grid_size.y);
+			let aabb = AABB::from_rect(wall_offset, self.grid_size, self.grid_size);
 			if aabb.circle_collision_check(position, radius) {
 				return Some(aabb);
 			}
@@ -158,15 +158,9 @@ impl GameWorld {
 			TileType::Wall(id) => Some((glam::uvec2(coord[0], coord[1]), id.clone()))
 		}).collect()
 	}
-	pub fn tile_grid_size(&self) -> glam::Vec2 {
+	pub fn get_grid_size(&self) -> f32 {
 		self.tilemap.grid_size
 	}
-	// pub fn actors_position(&self) -> Vec<glam::Vec2> {
-	// 	Vec::<glam::Vec2>::from([self.player.position]) 
-	// }
-	// pub fn actors_angle(&self) -> Vec<f32> {
-	// 	Vec::<f32>::from([self.player.angle])
-	// }
 	pub fn actors_position_angle_flatten(&self) -> Vec<[f32; 3]> {
 		Vec::<[f32; 3]>::from([[self.player.position.x, self.player.position.y, self.player.angle]]) //TODO: actors_position, actors_angle 모두 현재는 player만 담긴 Vector를 반환함. 추후 player 포함 enemies 목록까지 반환하도록 구현.
 	}

@@ -40,13 +40,13 @@ impl Renderer {
 		//let wall_offsets: Vec<glam::UVec2> = game_world.walls_offset().into_iter().collect();
 		let walls: Vec<u32> = game_world.get_walls().into_iter().flat_map(|(uvec, id)| 
 			{[uvec.x, uvec.y, id]}).collect();
-		let gridsize = game_world.tile_grid_size();
+		let gridsize = game_world.get_grid_size();
 
 		// for actors rendering
 		let actors_pos_ang = game_world.actors_position_angle_flatten();
 		let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 
-		self.wall_render.write(queue, viewproj.clone(), gridsize.clone(), walls.as_slice());
+		self.wall_render.write(queue, viewproj.clone(), gridsize, walls.as_slice());
 		self.actor_render.write(queue, viewproj.clone(), 50.0f32, actor_color.clone(), actors_pos_ang.as_slice());
 	}
 
@@ -125,7 +125,7 @@ impl ActorRender {
 
 impl WallRender {
 	pub fn write(&mut self, queue: &wgpu::Queue,
-		viewproj: glam::Mat4, gridsize: glam::Vec2, walls: &[u32]
+		viewproj: glam::Mat4, gridsize: f32, walls: &[u32]
 	) {
 		queue.write_buffer(&self.instb, 0, bytemuck::cast_slice(walls));
 		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
@@ -174,7 +174,7 @@ impl WallRender {
 
 		let gridsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::gridsize_ub"),
-			size: std::mem::size_of::<f32>() as u64 * 2,
+			size: std::mem::size_of::<f32>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
