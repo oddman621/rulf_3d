@@ -70,7 +70,7 @@ impl Rulf3D {
                     WindowEvent::KeyboardInput { event: winit::event::KeyEvent { 
 						physical_key: winit::keyboard::PhysicalKey::Code(keycode), 
 						state, repeat: false, .. 
-					}, .. } => input_state.set_key_state(keycode, state.is_pressed()),
+					}, .. } => input_state.set_key_state(keycode, state.is_pressed()), 
                     WindowEvent::MouseInput { state, button, .. } => {
 						match button {
 							winit::event::MouseButton::Left => input_state.set_mouse_left_pressed(state.is_pressed()),
