@@ -85,6 +85,7 @@ impl Rulf3D {
                         input_state.set_mouse_x_relative(rel.x);
                     },
                     WindowEvent::RedrawRequested => {
+                        // Convert game data to renderer specific
 						let cam_pos = glam::Mat4::from_translation(game_world.get_player_position().extend(0.0));
 						let cam_rot = glam::Mat4::IDENTITY;//glam::Mat4::from_rotation_z(-std::f32::consts::FRAC_PI_2 + self.scene.get_player_angle());
 						let view = cam_rot.inverse() * cam_pos.inverse();
@@ -98,12 +99,12 @@ impl Rulf3D {
 						let gridsize = game_world.tile_grid_size();
 
 						// for actors rendering
-						let actors_pos = game_world.actors_position();
-						let actors_angle = game_world.actors_angle();
+                        let actors_pos_ang = game_world.actors_position_angle_flatten();
 						let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
-						minimap_renderer.draw(&rulf3d.webgpu,
-							&wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, &viewproj, walls.as_slice(), 
-							&gridsize, actors_pos.as_slice(), actors_angle.as_slice(), 50.0f32, &actor_color);
+
+                        // renderer: write game data and render it
+                        minimap_renderer.write(&rulf3d.webgpu, &viewproj, walls.as_slice(), &gridsize, actors_pos_ang.as_slice(), 50.0f32, &actor_color);
+						minimap_renderer.draw(&rulf3d.webgpu, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, Some(&[[glam::vec2(-200.0, 100.0), glam::vec2(200.0, 100.0)]]));
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 

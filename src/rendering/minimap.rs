@@ -12,23 +12,33 @@ struct Vertex {
 pub struct Renderer {
 	wall_render: WallRender,
 	actor_render: ActorRender,
+
+	//debug
+	line_render: LineRender,
+	viewproj: glam::Mat4
 }
 
 impl Renderer {
 	pub fn new(webgpu: &WebGPU) -> Self {
 		Self { 
 			wall_render: WallRender::new(webgpu), 
-			actor_render: ActorRender::new(webgpu)
+			actor_render: ActorRender::new(webgpu),
+			line_render: LineRender::new(webgpu),
+			viewproj: glam::Mat4::default()
 		}
 	}
 
-
-
-	pub fn draw(&mut self, webgpu: &WebGPU,
-		clear_color: &wgpu::Color, viewproj: &glam::Mat4,
+	pub fn write(&mut self, webgpu: &WebGPU, 
+		viewproj: &glam::Mat4,
 		walls: &[u32], gridsize: &glam::Vec2,
-		actors_pos: &[glam::Vec2], actors_angle: &[f32], actor_size: f32, actor_color: &glam::Vec4
+		actors_pos_ang: &[[f32; 3]], actor_size: f32, actor_color: &glam::Vec4
 	) {
+		self.wall_render.write(&webgpu.queue, viewproj.clone(), gridsize.clone(), walls);
+		self.actor_render.write(&webgpu.queue, viewproj.clone(), actor_size.clone(), actor_color.clone(), actors_pos_ang);
+		self.viewproj = viewproj.clone();
+	}
+
+	pub fn draw(&mut self, webgpu: &WebGPU, clear_color: &wgpu::Color, debug_lines: Option<&[[glam::Vec2; 2]]>) {
 
 		let output = webgpu.surface.get_current_texture().unwrap();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -48,15 +58,21 @@ impl Renderer {
 		});
 		drop(render_pass);
 
-		self.wall_render.write(&webgpu.queue, viewproj.clone(), gridsize.clone(), walls);
 		self.wall_render.draw(&mut encoder, &view);
-		if actors_pos.len() == actors_angle.len() {
-			let actor_inst_data: Vec<[f32; 3]> = actors_pos.into_iter().enumerate()
-				.map(|(idx, pos)| [pos.x, pos.y, actors_angle[idx]]).collect();
-			self.actor_render.write(&webgpu.queue, viewproj.clone(), actor_size.clone(), actor_color.clone(), actor_inst_data.as_slice());
-			self.actor_render.draw(&mut encoder, &view);
+		self.actor_render.draw(&mut encoder, &view);
+
+		if let Some(vertices) = debug_lines {
+			let v: Vec<[glam::Vec3; 2]> = vertices.into_iter().map(|f| [f[0].extend(0.0), f[1].extend(0.0)]).collect();
+
+			self.line_render.draw(
+				&webgpu.queue, &mut encoder, &view, self.viewproj, 
+				&v.as_slice(),
+				glam::vec3(0.5, 0.1, 0.1)
+			);
 		}
 
+		
+		
 		webgpu.queue.submit(Some(encoder.finish()));
 		output.present();
 	}
@@ -582,131 +598,144 @@ impl ActorRender {
 	}
 }
 
-// struct LineRender {
-// 	instb: wgpu::Buffer,
-// 	viewproj_ub: wgpu::Buffer,
-// 	bind_group: wgpu::BindGroup,
-// 	pipeline: wgpu::RenderPipeline
-// }
+struct LineRender {
+	vb: wgpu::Buffer,
+	viewproj_ub: wgpu::Buffer,
+	bind_group: wgpu::BindGroup,
+	pipeline: wgpu::RenderPipeline
+}
 
-// impl LineRender {
-// 	pub fn new(webgpu: &WebGPU) -> Self {
-// 		let instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
-// 			label: Some("LineRender::instb"),
-// 			size: std::mem::size_of::<Vertex>() as u64 * 2,
-// 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-// 			mapped_at_creation: false
-// 		});
-// 		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
-// 			label: Some("LineRender::viewproj_ub"),
-// 			size: std::mem::size_of::<glam::Mat4>() as u64,
-// 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-// 			mapped_at_creation: false
-// 		});
+impl LineRender {
+	pub fn draw(&self, queue: &wgpu::Queue, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, 
+		viewproj: glam::Mat4, vertices: &[[glam::Vec3; 2]], color: glam::Vec3
+	) {
+		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
 
-// 		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor{
-// 			label: Some("LineRender bind group layout"),
-// 			entries: &[wgpu::BindGroupLayoutEntry {
-// 				binding: 0,
-// 				visibility: wgpu::ShaderStages::VERTEX,
-// 				ty: wgpu::BindingType::Buffer {
-// 					ty: wgpu::BufferBindingType::Uniform,
-// 					has_dynamic_offset: false,
-// 					min_binding_size: None
-// 				},
-// 				count: None
-// 			}]
-// 		});
+		let line_vertices: Vec<Vertex> = vertices.into_iter().map(
+			|f| [
+				Vertex{ position: f[0], color, uv: glam::Vec2::ZERO },
+				Vertex{ position: f[1], color, uv: glam::Vec2::ONE }
+			]
+		).flatten().collect();
 
-// 		let bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-// 			label: Some("LineRender::bind_group"),
-// 			layout: &bind_group_layout,
-// 			entries: &[wgpu::BindGroupEntry {
-// 				binding: 0,
-// 				resource: viewproj_ub.as_entire_binding()
-// 			}]
-// 		});
+		queue.write_buffer(&self.vb, 0, bytemuck::cast_slice(line_vertices.as_slice()));
 
-// 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor{
-// 			label: Some("LineRender shader module"),
-// 			source: wgpu::ShaderSource::Wgsl(include_str!("line.wgsl").into())
-// 		});
+		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("LineRender::draw()"),
+			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+				view, resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Load,
+					store: wgpu::StoreOp::Store
+				}
+			})],
+			..Default::default()
+		});
 
-// 		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
-// 			label: Some("LineRender pipeline layout"),
-// 			bind_group_layouts: &[&bind_group_layout],
-// 			push_constant_ranges: &[]
-// 		});
+		render_pass.set_pipeline(&self.pipeline);
+		render_pass.set_bind_group(0, &self.bind_group, &[]);
+		render_pass.set_vertex_buffer(0, self.vb.slice(..));
+		render_pass.draw(0..line_vertices.len() as u32, 0..1);
 
-// 		let pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-// 			label: Some("LineRender::pipeline"),
-// 			layout: Some(&pipeline_layout),
-// 			vertex: wgpu::VertexState {
-// 				module: &shader_module,
-// 				entry_point: "vs_main",
-// 				buffers: &[wgpu::VertexBufferLayout {
-// 					array_stride: std::mem::size_of::<Vertex>() as u64,
-// 					step_mode: wgpu::VertexStepMode::Instance,
-// 					attributes: &[
-// 						wgpu::VertexAttribute {
-// 							format: wgpu::VertexFormat::Float32x3,
-// 							offset: 0,
-// 							shader_location: 0
-// 						},
-// 						wgpu::VertexAttribute {
-// 							format: wgpu::VertexFormat::Float32x3,
-// 							offset: std::mem::size_of::<f32>() as u64 * 3,
-// 							shader_location: 1
-// 						}
-// 					]
-// 				}]
-// 			},
-// 			primitive: wgpu::PrimitiveState {
-// 				topology: wgpu::PrimitiveTopology::LineList,
-// 				strip_index_format: None,
-// 				front_face: wgpu::FrontFace::Ccw,
-// 				cull_mode: Some(wgpu::Face::Back),
-// 				unclipped_depth: false,
-// 				polygon_mode: wgpu::PolygonMode::Fill,
-// 				conservative: false
-// 			},
-// 			depth_stencil: None,
-// 			multisample: wgpu::MultisampleState::default(),
-// 			fragment: Some(wgpu::FragmentState {
-// 				module: &shader_module,
-// 				entry_point: "fs_main",
-// 				targets: &[Some(wgpu::ColorTargetState {
-// 					format: webgpu.config.format,
-// 					blend: Some(wgpu::BlendState::REPLACE),
-// 					write_mask: wgpu::ColorWrites::ALL
-// 				})]
-// 			}),
-// 			multiview: None
-// 		});
+	}
+}
 
-// 		Self { instb, viewproj_ub, bind_group, pipeline}
-// 	}
-// }
+impl LineRender {
+	const MAX_LINES: u64 = 4096;
+	pub fn new(webgpu: &WebGPU) -> Self {
+		let vb = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
+			label: Some("LineRender::vb"),
+			size: std::mem::size_of::<Vertex>() as u64 * 2 * Self::MAX_LINES,
+			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
+		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor{
+			label: Some("LineRender::viewproj_ub"),
+			size: std::mem::size_of::<glam::Mat4>() as u64,
+			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
 
-	// pub fn draw_lines(&mut self, webgpu: &WebGPU, viewproj: &glam::Mat4, vertices: &[[Vertex; 2]]) {
-	// 	webgpu.queue.write_buffer(&self.line_render.instb, 0, bytemuck::cast_slice(vertices));
-	// 	webgpu.queue.write_buffer(&self.line_render.viewproj_ub, 0, bytemuck::cast_slice(&[*viewproj]));
+		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor{
+			label: Some("LineRender bind group layout"),
+			entries: &[wgpu::BindGroupLayoutEntry {
+				binding: 0,
+				visibility: wgpu::ShaderStages::VERTEX,
+				ty: wgpu::BindingType::Buffer {
+					ty: wgpu::BufferBindingType::Uniform,
+					has_dynamic_offset: false,
+					min_binding_size: None
+				},
+				count: None
+			}]
+		});
 
-	// 	let output = webgpu.surface.get_current_texture().unwrap();
-	// 	let size = output.texture.size();
-	// 	let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+		let bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some("LineRender::bind_group"),
+			layout: &bind_group_layout,
+			entries: &[wgpu::BindGroupEntry {
+				binding: 0,
+				resource: viewproj_ub.as_entire_binding()
+			}]
+		});
 
-	// 	let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-	// 	let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-	// 		label: Some("Renderer::draw_lines()"),
-	// 		color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-	// 			view: &view,
-	// 			resolve_target: None,
-	// 			ops: wgpu::Operations {
-	// 				load: wgpu::LoadOp::Load,
-	// 				store: wgpu::StoreOp::Store
-	// 			}
-	// 		})],
-	// 		..Default::default()
-	// 	});
-	// }
+		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor{
+			label: Some("LineRender shader module"),
+			source: wgpu::ShaderSource::Wgsl(include_str!("line.wgsl").into())
+		});
+
+		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
+			label: Some("LineRender pipeline layout"),
+			bind_group_layouts: &[&bind_group_layout],
+			push_constant_ranges: &[]
+		});
+
+		let pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+			label: Some("LineRender::pipeline"),
+			layout: Some(&pipeline_layout),
+			vertex: wgpu::VertexState {
+				module: &shader_module,
+				entry_point: "vs_main",
+				buffers: &[wgpu::VertexBufferLayout {
+					array_stride: std::mem::size_of::<Vertex>() as u64,
+					step_mode: wgpu::VertexStepMode::Vertex,
+					attributes: &[
+						wgpu::VertexAttribute {
+							format: wgpu::VertexFormat::Float32x3,
+							offset: 0,
+							shader_location: 0
+						},
+						wgpu::VertexAttribute {
+							format: wgpu::VertexFormat::Float32x3,
+							offset: std::mem::size_of::<f32>() as u64 * 3,
+							shader_location: 1
+						}
+					]
+				}]
+			},
+			primitive: wgpu::PrimitiveState {
+				topology: wgpu::PrimitiveTopology::LineList,
+				strip_index_format: None,
+				front_face: wgpu::FrontFace::Ccw,
+				cull_mode: Some(wgpu::Face::Back),
+				unclipped_depth: false,
+				polygon_mode: wgpu::PolygonMode::Fill,
+				conservative: false
+			},
+			depth_stencil: None,
+			multisample: wgpu::MultisampleState::default(),
+			fragment: Some(wgpu::FragmentState {
+				module: &shader_module,
+				entry_point: "fs_main",
+				targets: &[Some(wgpu::ColorTargetState {
+					format: webgpu.config.format,
+					blend: Some(wgpu::BlendState::REPLACE),
+					write_mask: wgpu::ColorWrites::ALL
+				})]
+			}),
+			multiview: None
+		});
+
+		Self { vb, viewproj_ub, bind_group, pipeline}
+	}
+}
