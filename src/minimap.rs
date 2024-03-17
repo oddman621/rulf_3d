@@ -46,11 +46,6 @@ impl Renderer {
 		let actors_pos_ang = game_world.actors_position_angle_flatten();
 		let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 
-		// for debug lines
-		let from = game_world.get_player_position();
-		let to = from + game_world.get_player_forward_vector() * 100.0;
-
-		//self.write(queue, &viewproj, walls.as_slice(), &gridsize, actors_pos_ang.as_slice(), 50.0f32, &actor_color);
 		self.wall_render.write(queue, viewproj.clone(), gridsize.clone(), walls.as_slice());
 		self.actor_render.write(queue, viewproj.clone(), 50.0f32, actor_color.clone(), actors_pos_ang.as_slice());
 	}
