@@ -102,9 +102,13 @@ impl Rulf3D {
                         let actors_pos_ang = game_world.actors_position_angle_flatten();
 						let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 
+                        // for debug lines
+                        let from = game_world.get_player_position();
+                        let to = from + game_world.get_player_forward_vector() * 100.0;
+
                         // renderer: write game data and render it
                         minimap_renderer.write(&rulf3d.webgpu, &viewproj, walls.as_slice(), &gridsize, actors_pos_ang.as_slice(), 50.0f32, &actor_color);
-						minimap_renderer.draw(&rulf3d.webgpu, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, Some(&[[glam::vec2(-200.0, 100.0), glam::vec2(200.0, 100.0)]]));
+						minimap_renderer.draw(&rulf3d.webgpu, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0}, Some(&[[from, to]]));
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 

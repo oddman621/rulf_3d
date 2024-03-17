@@ -70,8 +70,6 @@ impl Renderer {
 				glam::vec3(1.0, 1.0, 0.0)
 			);
 		}
-
-		
 		
 		webgpu.queue.submit(Some(encoder.finish()));
 		output.present();
