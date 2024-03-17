@@ -67,7 +67,7 @@ impl Renderer {
 			self.line_render.draw(
 				&webgpu.queue, &mut encoder, &view, self.viewproj, 
 				&v.as_slice(),
-				glam::vec3(0.5, 0.1, 0.1)
+				glam::vec3(1.0, 1.0, 0.0)
 			);
 		}
 
