@@ -1,5 +1,5 @@
 use wgpu::util::DeviceExt;
-use super::WebGPU;
+use crate::webgpu::WebGPU;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -179,7 +179,7 @@ impl WallRender {
 
 		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
-		let wall_array_image = image::load_from_memory(include_bytes!("array_texture.png")).unwrap();
+		let wall_array_image = image::load_from_memory(include_bytes!("asset/array_texture.png")).unwrap();
 		let texture_array_size = wgpu::Extent3d {
 			width: wall_array_image.width(),
 			height: wall_array_image.height() / 4,
@@ -312,7 +312,7 @@ impl WallRender {
 
 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender wall.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(include_str!("wall.wgsl").into())
+			source: wgpu::ShaderSource::Wgsl(include_str!("asset/wall.wgsl").into())
 		});
 		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::render_pipeline"),
@@ -518,7 +518,7 @@ impl ActorRender {
 		});
 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("ActorRender actor.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(include_str!("actor.wgsl").into())
+			source: wgpu::ShaderSource::Wgsl(include_str!("asset/actor.wgsl").into())
 		});
 
 		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
@@ -679,7 +679,7 @@ impl LineRender {
 
 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor{
 			label: Some("LineRender shader module"),
-			source: wgpu::ShaderSource::Wgsl(include_str!("line.wgsl").into())
+			source: wgpu::ShaderSource::Wgsl(include_str!("asset/line.wgsl").into())
 		});
 
 		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{

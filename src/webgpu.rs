@@ -4,14 +4,13 @@ use std::sync::Arc;
 use winit::window::Window;
 
 //렌더링엔진은 크게 3파트로 나눔: GUI, 미니맵, 1인칭
-pub mod minimap;
 
 pub struct WebGPU
 {
-	surface: wgpu::Surface<'static>,
-	device: wgpu::Device,
-	queue: wgpu::Queue,
-	config: wgpu::SurfaceConfiguration
+	pub surface: wgpu::Surface<'static>,
+	pub device: wgpu::Device,
+	pub queue: wgpu::Queue,
+	pub config: wgpu::SurfaceConfiguration
 }
 
 

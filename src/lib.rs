@@ -30,14 +30,15 @@ Rendering: 화면 그리기. 게임장면+GUI. WebGPU, OpenGL, ...
  */
 
 
-mod rendering;
+mod webgpu;
 mod game;
 mod input;
+mod minimap;
 
 pub struct Rulf3D {
 	event_loop: EventLoop<()>,
 	window: Arc<Window>,
-	webgpu: rendering::WebGPU,
+	webgpu: webgpu::WebGPU,
 	// separate engine and data
 }
 
@@ -46,7 +47,7 @@ impl Rulf3D {
 	pub fn new() -> Self {
 		let event_loop = EventLoop::new().unwrap();
 		let window = Arc::new(Window::new(&event_loop).unwrap());
-		let webgpu = rendering::WebGPU::new(window.clone());
+		let webgpu = webgpu::WebGPU::new(window.clone());
 
 		Self { event_loop, window, webgpu }
 	}
@@ -54,7 +55,7 @@ impl Rulf3D {
 	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
 		let mut rulf3d = Self::new();
 		let mut input_state = input::InputState::default();
-		let mut minimap_renderer = rendering::minimap::Renderer::new(&rulf3d.webgpu);
+		let mut minimap_renderer = minimap::Renderer::new(&rulf3d.webgpu);
 		let mut game_world = game::GameWorld::test_gameworld();
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
