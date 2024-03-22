@@ -13,13 +13,15 @@ struct Vertex {
 pub struct Renderer {
 	wall_render: WallRender,
 	actor_render: ActorRender,
+	raycast_render: RayCastRender
 }
 
 impl Renderer {
 	pub fn new(webgpu: &WebGPU) -> Self {
 		Self { 
 			wall_render: WallRender::new(webgpu), 
-			actor_render: ActorRender::new(webgpu)
+			actor_render: ActorRender::new(webgpu),
+			raycast_render: RayCastRender::new(webgpu)
 		}
 	}
 
@@ -48,6 +50,20 @@ impl Renderer {
 
 		self.wall_render.write(queue, viewproj.clone(), gridsize, walls.as_slice());
 		self.actor_render.write(queue, viewproj.clone(), 50.0f32, actor_color.clone(), actors_pos_ang.as_slice());
+
+		if let Ok(raycols) = crate::raycasting::multicast_raycols(
+			&game_world.get_walls(), game_world.get_grid_size(), 
+			game_world.get_player_position(), game_world.get_player_forward_vector(), std::f32::consts::FRAC_PI_3, 
+			10, 100
+		) {
+			self.raycast_render.write(queue, viewproj.clone(), game_world.get_player_position(), &raycols);
+		}
+		// if let Some((dist, _)) = crate::raycasting::single_raycast(&game_world.get_walls(), game_world.get_grid_size(), 
+		// game_world.get_player_position(), game_world.get_player_forward_vector(), 100) {
+		// 	let mut raycols = Vec::<glam::Vec2>::new();
+		// 	raycols.push(game_world.get_player_position() + game_world.get_player_forward_vector() * dist);
+		// 	self.raycast_render.write(queue, viewproj.clone(), game_world.get_player_position(), &raycols);
+		// }
 	}
 
 	fn draw(&mut self, webgpu: &WebGPU, clear_color: &wgpu::Color) {
@@ -72,9 +88,158 @@ impl Renderer {
 
 		self.wall_render.draw(&mut encoder, &view);
 		self.actor_render.draw(&mut encoder, &view);
+		self.raycast_render.draw(&mut encoder, &view);
 		
 		webgpu.queue.submit(Some(encoder.finish()));
 		output.present();
+	}
+}
+
+// Basically Line Render, but specially for Raycasting.
+struct  RayCastRender {
+	vb: wgpu::Buffer,
+	ib: wgpu::Buffer,
+	line_count: u32,
+	viewproj_ub: wgpu::Buffer,
+	bind_group: wgpu::BindGroup,
+	pipeline: wgpu::RenderPipeline
+}
+
+impl RayCastRender {
+	const MAX_RAY_COUNT: u64 = 4320;
+}
+
+impl RayCastRender {
+	pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor{
+			label: Some("WallRender::draw()"),
+			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+				view, resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Load,
+					store: wgpu::StoreOp::Store
+				}
+			})],
+			..Default::default()
+		});
+		render_pass.set_pipeline(&self.pipeline);
+		render_pass.set_bind_group(0, &self.bind_group, &[]);
+		render_pass.set_vertex_buffer(0, self.vb.slice(..));
+		render_pass.set_index_buffer(self.ib.slice(..), wgpu::IndexFormat::Uint16);
+		render_pass.draw_indexed(0..(self.line_count * 2), 0, 0..1);
+	}
+	pub fn write(&mut self, queue: &wgpu::Queue,
+		viewproj: glam::Mat4, pos: glam::Vec2, raycols: &Vec<glam::Vec2>
+	) {
+		queue.write_buffer(&self.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
+
+		let mut vec = raycols.clone();
+		vec.insert(0, pos);
+
+		queue.write_buffer(&self.vb, 0, bytemuck::cast_slice(&vec));
+
+		let offset: u64 = std::mem::size_of::<u16>() as u64 * 2;
+		self.line_count = raycols.len() as u32;
+		for n in 0..self.line_count {
+			let data = [0, n as u16 + 1];
+			queue.write_buffer(&self.ib, offset * n as u64, bytemuck::cast_slice(&data));
+		}
+	}
+
+	pub fn new(webgpu: &WebGPU) -> Self {
+		let vb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("RayCastRender::vb"),
+			size: std::mem::size_of::<glam::Vec2>() as u64 * (Self::MAX_RAY_COUNT + 1),
+			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
+		let ib = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("RayCastRender::ib"),
+			size: std::mem::size_of::<u16>() as u64 * 2 * Self::MAX_RAY_COUNT,
+			usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
+		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("RayCastRender::viewproj_ub"),
+			size: std::mem::size_of::<glam::Mat4>() as u64,
+			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false
+		});
+
+		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			label: Some("RayCastRender bind group layout"),
+			entries: &[wgpu::BindGroupLayoutEntry {
+				binding: 0,
+				visibility: wgpu::ShaderStages::VERTEX,
+				ty: wgpu::BindingType::Buffer {
+					ty: wgpu::BufferBindingType::Uniform,
+					has_dynamic_offset: false,
+					min_binding_size: None
+				},
+				count: None
+			}]
+		});
+
+		let bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some("RayCastRender::bind_group"),
+			layout: &bind_group_layout,
+			entries: &[wgpu::BindGroupEntry {
+				binding: 0,
+				resource: viewproj_ub.as_entire_binding()
+			}]
+		});
+
+		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+			label: Some("RayCastRender simplevert_yellow.wgsl shader"),
+			source: wgpu::ShaderSource::Wgsl(include_str!("asset/simplevert_yellow.wgsl").into())
+		});
+
+		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+			label: Some("RayCastRender pipeline layout"),
+			bind_group_layouts: &[&bind_group_layout],
+			push_constant_ranges: &[]
+		});
+
+		let pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+			label: Some("RayCastRender::pipeline"),
+			layout: Some(&pipeline_layout),
+			vertex: wgpu::VertexState {
+				module: &shader_module,
+				entry_point: "vs_main",
+				buffers: &[wgpu::VertexBufferLayout {
+					array_stride: std::mem::size_of::<glam::Vec2>() as u64,
+					step_mode: wgpu::VertexStepMode::Vertex,
+					attributes: &[wgpu::VertexAttribute {
+						format: wgpu::VertexFormat::Float32x2,
+						offset: 0,
+						shader_location: 0
+					}]
+				}]
+			},
+			primitive: wgpu::PrimitiveState {
+				topology: wgpu::PrimitiveTopology::LineList,
+				strip_index_format: None,
+				front_face: wgpu::FrontFace::Ccw,
+				cull_mode: Some(wgpu::Face::Back),
+				unclipped_depth: false,
+				polygon_mode: wgpu::PolygonMode::Fill,
+				conservative: false
+			},
+			depth_stencil: None,
+			multisample: wgpu::MultisampleState::default(),
+			fragment: Some(wgpu::FragmentState {
+				module: &shader_module,
+				entry_point: "fs_main",
+				targets: &[Some(wgpu::ColorTargetState {
+					format: webgpu.config.format,
+					blend: Some(wgpu::BlendState::REPLACE),
+					write_mask: wgpu::ColorWrites::ALL
+				})]
+			}),
+			multiview: None
+		});
+
+		Self { vb, ib, line_count: 0, viewproj_ub, bind_group, pipeline }
 	}
 }
 

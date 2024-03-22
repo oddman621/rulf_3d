@@ -15,31 +15,29 @@ ray의 direction: (cos_a, sin_a)
 
 use std::collections::HashMap;
 
-// pub enum MultiRaycastError {
-// 	CAMFOV_IS_ABOVE_PI
-// }
+pub fn multicast_raycols(
+	walls: &HashMap<glam::UVec2, u32>, gridsize: f32, 
+	from: glam::Vec2, camdir: glam::Vec2, camfov: f32, 
+	raycount: u32, stepnum: u32
+) -> Result<Vec<glam::Vec2>, ()> {
+	let tan_half_fov = (camfov / 2.0).tan(); // cam_plane.len / camdir_len
+	if tan_half_fov.is_infinite() {
+		return Err(());
+	}
 
-// pub fn multi_raycast(walls: &HashMap<glam::UVec2, u32>, gridsize: f32, from: glam::Vec2, camdir: glam::Vec2, camfov: f32, raycount: u32, stepnum: u32) -> Result<Vec<Option<(f32, u32)>>, MultiRaycastError> {
-// 	let tan_half_fov = (camfov / 2.0).tan(); // cam_plane.len / camdir_len
-// 	if tan_half_fov.is_infinite() {
-// 		return Err(MultiRaycastError::CAMFOV_IS_ABOVE_PI);
-// 	}
+	let cam_plane = camdir.perp() * 0.5;
+	let camdir_len = cam_plane.length() / tan_half_fov;
+	let camdir = camdir * camdir_len;
 
-// 	let cam_plane = camdir.perp() * 0.5;
-// 	let camdir_len = cam_plane.length() / tan_half_fov;
-// 	let camdir = camdir * camdir_len;
-
-// 	for n in 0..raycount {
-// 		let rayvec = camdir + cam_plane * (0.5 - n as f32 / raycount as f32);
-// 	}
-
-// 	let raycasting: Vec<_> = (0..raycount).into_iter().map(|f| {
-// 		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
-// 		single_raycast(walls, gridsize, from, rayvec, stepnum)
-// 	}).collect();
-
-// 	Ok(raycasting)
-// }
+	Ok((0..raycount).into_iter().map(|f| {
+		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
+		if let Some((dist, _texid)) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
+			from + rayvec * dist
+		} else {
+			glam::Vec2::ZERO
+		}
+	}).collect())
+}
 
 // Option<(거리, 벽idx)>
 // https://lodev.org/cgtutor/raycasting.html
