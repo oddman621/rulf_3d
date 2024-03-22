@@ -4,7 +4,7 @@ use winit::keyboard::KeyCode;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Action {
-	MoveForward, MoveBackward, StrafeLeft, StrafeRight//, TurnLeft, TurnRight
+	MoveForward, MoveBackward, StrafeLeft, StrafeRight, ToggleMinimap
 }
 
 #[derive(Default)]
@@ -16,8 +16,13 @@ struct MouseState {
 
 pub struct InputState {
 	key_binding: HashMap<KeyCode, Action>,
-	action_state: HashMap<Action, bool>,
+	action_state: HashMap<Action, u32>,
 	mouse_state: MouseState
+}
+
+impl InputState {
+	const JUST: u32		= 0b01;
+	const PRESSED: u32	= 0b10;
 }
 
 impl Default for InputState {
@@ -32,6 +37,7 @@ impl Default for InputState {
 		input_state.bind_key(KeyCode::KeyS, Action::MoveBackward);
 		input_state.bind_key(KeyCode::KeyA, Action::StrafeLeft);
 		input_state.bind_key(KeyCode::KeyD, Action::StrafeRight);
+		input_state.bind_key(KeyCode::Tab, Action::ToggleMinimap);
 
 		input_state
 	}
@@ -49,14 +55,34 @@ impl InputState {
 	}
 
 	pub fn set_action_state(&mut self, action: Action, pressed: bool) {
-		self.action_state.insert(action, pressed);
+		let pressed_flag = if pressed { Self::PRESSED } else { 0b0 };
+		self.action_state.insert(action, Self::JUST | pressed_flag);
 	}
 
-	pub fn is_action_pressed(&self, action: Action) -> bool {
-		self.action_state.get(&action).unwrap_or(&false).clone()
+	pub fn is_action_pressed(&mut self, action: Action) -> bool {
+		match self.action_state.get(&action) {
+			None => false,
+			Some(state) => {
+				let pressed_flag = state.clone() & Self::PRESSED;
+				self.action_state.insert(action, pressed_flag);
+				pressed_flag != 0
+			}
+		}
 	}
 
-	pub fn get_dir_input_vector(&self) -> glam::Vec2 {
+	pub fn is_action_just_pressed(&mut self, action: Action) -> bool {
+		match self.action_state.get(&action) {
+			None => false,
+			Some(state) => {
+				let just_flag = state.clone() & Self::JUST;
+				let pressed_flag = state.clone() & Self::PRESSED;
+				self.action_state.insert(action, pressed_flag);
+				just_flag != 0 && pressed_flag != 0
+			}
+		}
+	}
+
+	pub fn get_dir_input_vector(&mut self) -> glam::Vec2 {
 		let y = if self.is_action_pressed(Action::MoveForward) {1.0} else {0.0} + if self.is_action_pressed(Action::MoveBackward) {-1.0} else {0.0};
 		let x = if self.is_action_pressed(Action::StrafeLeft) {-1.0} else {0.0} + if self.is_action_pressed(Action::StrafeRight) {1.0} else {0.0};
 

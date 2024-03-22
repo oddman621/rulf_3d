@@ -59,9 +59,12 @@ impl Rulf3D {
 		let mut minimap_renderer = minimap::Renderer::new(&rulf3d.webgpu);
 		let mut game_world = game::GameWorld::test_gameworld();
 
+        let mut draw_minimap = true;
+
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
         let mut last_mouse_pos = glam::Vec2::default();
+
         rulf3d.event_loop.run(
             move |event, elwt| 
             match event 
@@ -87,7 +90,9 @@ impl Rulf3D {
                         input_state.set_mouse_x_relative(rel.x);
                     },
                     WindowEvent::RedrawRequested => {
-                        minimap_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
+                        if draw_minimap {
+                            minimap_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
+                        }
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 
@@ -111,6 +116,10 @@ impl Rulf3D {
 
 						let mouse_rel_x = input_state.take_mouse_x_relative();
 						game_world.rotate_player(-mouse_rel_x.to_radians() * 100.0 * delta as f32);
+
+                        if input_state.is_action_just_pressed(input::Action::ToggleMinimap) {
+                            draw_minimap = !draw_minimap;
+                        }
 
 
                         // raycast
