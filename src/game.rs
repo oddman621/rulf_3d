@@ -62,9 +62,9 @@ impl TileMap {
 		const TEST_TILEMAP: [TileType; 64] = [
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0), 
 		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
-		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(2),
-		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3),
-		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3),
+		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty,   TileType::Wall(2),
+		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3), TileType::Empty,   TileType::Wall(3),
+		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty,   TileType::Wall(3),
 		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(2),
 		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0) 
