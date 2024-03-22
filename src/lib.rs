@@ -34,6 +34,7 @@ mod webgpu;
 mod game;
 mod input;
 mod minimap;
+mod raycasting;
 
 pub struct Rulf3D {
 	event_loop: EventLoop<()>,
@@ -101,14 +102,22 @@ impl Rulf3D {
                     let last_process_time = Instant::now().duration_since(last_process_tick);
                     if last_process_time >= process_tickrate {
                         let delta = last_process_time.as_secs_f64();
-                        last_process_tick = Instant::now(); // doing process point
+                        last_process_tick = Instant::now();
                         
+                        // input
                         let dir_input_vec = input_state.get_dir_input_vector();
 						let wishdir = game_world.get_player_forward_vector().rotate((-glam::Vec2::Y).rotate(dir_input_vec));
 						game_world.translate_player(wishdir * 100.0 * delta as f32);
 
 						let mouse_rel_x = input_state.take_mouse_x_relative();
 						game_world.rotate_player(-mouse_rel_x.to_radians() * 100.0 * delta as f32);
+
+
+                        // raycast
+                        match raycasting::raycast(&game_world.get_walls(), game_world.get_grid_size(), game_world.get_player_position(), game_world.get_player_forward_vector(), 100) {
+                            Some((distance, index)) => rulf3d.window.set_title(format!("({:.1}, {})", distance, index).as_str()),
+                            None => rulf3d.window.set_title("None")
+                        }
 
                         rulf3d.window.request_redraw();
                     }
