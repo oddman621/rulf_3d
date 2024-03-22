@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use winit::keyboard::KeyCode;
 
@@ -15,8 +15,8 @@ struct MouseState {
 }
 
 pub struct InputState {
-	key_binding: HashMap<KeyCode, Action>,
-	action_state: HashMap<Action, u32>,
+	action_binding: HashMap<Action, HashSet<KeyCode>>,
+	key_state: HashMap<KeyCode, u32>,
 	mouse_state: MouseState
 }
 
@@ -27,57 +27,95 @@ impl InputState {
 
 impl Default for InputState {
 	fn default() -> Self {
-		let key_binding = HashMap::new();
-		let action_state = HashMap::new();
+		let action_binding = HashMap::new();
+		let key_state = HashMap::new();
 		let mouse_state = MouseState::default();
 
-		let mut input_state = Self {key_binding, action_state, mouse_state};
+		let mut input_state = Self {action_binding, key_state, mouse_state};
 
-		input_state.bind_key(KeyCode::KeyW, Action::MoveForward);
-		input_state.bind_key(KeyCode::KeyS, Action::MoveBackward);
-		input_state.bind_key(KeyCode::KeyA, Action::StrafeLeft);
-		input_state.bind_key(KeyCode::KeyD, Action::StrafeRight);
-		input_state.bind_key(KeyCode::Tab, Action::ToggleMinimap);
+		input_state.bind_action(Action::MoveForward, KeyCode::KeyW);
+		input_state.bind_action(Action::MoveBackward, KeyCode::KeyS);
+		input_state.bind_action(Action::StrafeLeft, KeyCode::KeyA);
+		input_state.bind_action(Action::StrafeRight, KeyCode::KeyD);
+		input_state.bind_action(Action::ToggleMinimap, KeyCode::Tab);
 
 		input_state
 	}
 }
 
 impl InputState {
-	pub fn bind_key(&mut self, key: KeyCode, action: Action) {
-		self.key_binding.insert(key, action);
-	}
 
-	pub fn set_key_state(&mut self, key: KeyCode, pressed: bool) {
-		if let Some(action) = self.key_binding.get(&key) {
-			self.set_action_state(*action, pressed);
+	// key binding
+
+	pub fn bind_action(&mut self, action: Action, key: KeyCode) {
+		match self.action_binding.get_mut(&action) {
+			None => {
+				let mut hashset = HashSet::new();
+				hashset.insert(key);
+				self.action_binding.insert(action, hashset);
+			},
+			Some(hashset) => { 
+				hashset.insert(key);
+			}
 		}
 	}
 
-	pub fn set_action_state(&mut self, action: Action, pressed: bool) {
+	// NOTE: works well but add '_' because not used now.
+	pub fn _unbind_action(&mut self, action: Action, key: KeyCode) {
+		match self.action_binding.get_mut(&action) {
+			Some(hashset) => {
+				hashset.remove(&key);
+			}
+			_ => ()
+		}
+	}
+
+	// NOTE: works well but add '_' because not used now.
+	pub fn _clear_action_binding(&mut self, action: Action) {
+		self.action_binding.remove(&action);
+	}
+
+
+	// key action press and release
+
+	pub fn set_key_state(&mut self, key: KeyCode, pressed: bool) {
 		let pressed_flag = if pressed { Self::PRESSED } else { 0b0 };
-		self.action_state.insert(action, Self::JUST | pressed_flag);
+		self.key_state.insert(key, Self::JUST | pressed_flag);
 	}
 
 	pub fn is_action_pressed(&mut self, action: Action) -> bool {
-		match self.action_state.get(&action) {
+		match self.action_binding.get(&action) {
 			None => false,
-			Some(state) => {
-				let pressed_flag = state.clone() & Self::PRESSED;
-				self.action_state.insert(action, pressed_flag);
-				pressed_flag != 0
+			Some(keys) => {
+				for key in keys {
+					if let Some(state) = self.key_state.get(key) {
+						let pressed_flag = state & Self::PRESSED;
+						self.key_state.insert(key.clone(), pressed_flag);
+						if pressed_flag != 0 {
+							return true;
+						}
+					}
+				}
+				false
 			}
 		}
 	}
 
 	pub fn is_action_just_pressed(&mut self, action: Action) -> bool {
-		match self.action_state.get(&action) {
+		match self.action_binding.get(&action) {
 			None => false,
-			Some(state) => {
-				let just_flag = state.clone() & Self::JUST;
-				let pressed_flag = state.clone() & Self::PRESSED;
-				self.action_state.insert(action, pressed_flag);
-				just_flag != 0 && pressed_flag != 0
+			Some(keys) => {
+				for key in keys {
+					if let Some(state) = self.key_state.get(key) {
+						let just_flag = state & Self::JUST;
+						let pressed_flag = state & Self::PRESSED;
+						self.key_state.insert(key.clone(), pressed_flag);
+						if pressed_flag != 0 && just_flag != 0 {
+							return true;
+						}
+					}
+				}
+				false
 			}
 		}
 	}
@@ -88,6 +126,9 @@ impl InputState {
 
 		glam::vec2(x, y).try_normalize().unwrap_or_default()
 	}
+
+
+	// mouse
 
 	pub fn set_mouse_x_relative(&mut self, rel: f32) {
 		self.mouse_state.relative_x = rel;
