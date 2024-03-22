@@ -114,7 +114,7 @@ impl Rulf3D {
 
 
                         // raycast
-                        match raycasting::raycast(&game_world.get_walls(), game_world.get_grid_size(), game_world.get_player_position(), game_world.get_player_forward_vector(), 100) {
+                        match raycasting::single_raycast(&game_world.get_walls(), game_world.get_grid_size(), game_world.get_player_position(), game_world.get_player_forward_vector(), 100) {
                             Some((distance, index)) => rulf3d.window.set_title(format!("({:.1}, {})", distance, index).as_str()),
                             None => rulf3d.window.set_title("None")
                         }
