@@ -1,7 +1,7 @@
 struct SurfaceInfo {
 	width: u32,
 	half_height: u32,
-	scale: u32
+	scale: u32 // TODO: No use. Delete it or use it.
 };
 
 struct RaycastData {
@@ -21,8 +21,13 @@ struct RaycastDataArray {
 @group(1) @binding(0) var wall_texture_array: texture_2d_array<f32>;
 @group(1) @binding(1) var texture_sampler: sampler;
 
+struct FragmentOutput {
+	@location(0) color: vec4<f32>,
+	@builtin(frag_depth) depth: f32
+}
+
 @fragment
-fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 
 	var x_ratio = pos.x / f32(surface_info.width);
 	var raycount = raycast_data_array.raycount;
@@ -49,7 +54,11 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 	if abs(f32(surface_info.half_height) - pos.y) > wall_half_height {
 	 	discard;
 	}
+
+	var out: FragmentOutput;
+	out.color = color;
+	out.depth = 1.0;
 	
-	return color;
+	return out;
 }
 
