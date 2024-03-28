@@ -110,10 +110,9 @@ pub fn single_raycast(
 			};
 			let point_of_collision = tilespace_from + rayvec * projected_tilemap_dist;
 			let mapped_poc = point_of_collision.fract();
-			let angle = rayvec.to_angle();
 			let u_offset = match side {
-				Side::EW =>  if angle.cos() > 0.0 {mapped_poc.y} else {1.0 - mapped_poc.y},
-				Side::NS =>  if angle.sin() < 0.0 {mapped_poc.x} else {1.0 - mapped_poc.x}
+				Side::EW =>  if rayvec.x > 0.0 {mapped_poc.y} else {1.0 - mapped_poc.y},
+				Side::NS =>  if rayvec.y < 0.0 {mapped_poc.x} else {1.0 - mapped_poc.x}
 			};
 			
 			return Some((projected_tilemap_dist * gridsize, texid.clone(), u_offset));

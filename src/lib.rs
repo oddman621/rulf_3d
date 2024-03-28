@@ -1,8 +1,6 @@
 use std::{sync::Arc, time::{Duration, Instant}};
 use winit::{
-    event::{Event, StartCause, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::Window,
+    dpi::PhysicalPosition, event::{Event, StartCause, WindowEvent}, event_loop::{ControlFlow, EventLoop}, window::Window
 };
 
 /*
@@ -37,41 +35,29 @@ mod minimap;
 mod raycasting;
 mod firstperson;
 
-pub struct Rulf3D {
-	event_loop: EventLoop<()>,
-	window: Arc<Window>,
-	webgpu: webgpu::WebGPU,
-	// separate engine and data
-}
+pub struct Rulf3D;
 
 
 impl Rulf3D {
-	pub fn new() -> Self {
+	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
 		let event_loop = EventLoop::new().unwrap();
 		let window = Arc::new(Window::new(&event_loop).unwrap());
-		let webgpu = webgpu::WebGPU::new(window.clone());
-
-		Self { event_loop, window, webgpu }
-	}
-
-	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
-		let mut rulf3d = Self::new();
+		let mut webgpu = webgpu::WebGPU::new(window.clone());
 		let mut input_state = input::InputState::default();
-		let mut minimap_renderer = minimap::Renderer::new(&rulf3d.webgpu);
-        let mut firstperson_renderer = firstperson::Renderer::new(&rulf3d.webgpu);
+		let mut minimap_renderer = minimap::Renderer::new(&webgpu);
+        let mut firstperson_renderer = firstperson::Renderer::new(&webgpu);
 		let mut game_world = game::GameWorld::test_gameworld();
 
         let mut draw_minimap = false;
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
-        let mut last_mouse_pos = glam::Vec2::default();
 
-        rulf3d.event_loop.run(
+        event_loop.run(
             move |event, elwt| 
             match event 
             {
-                Event::WindowEvent { event, window_id } if window_id == rulf3d.window.id() => 
+                Event::WindowEvent { event, window_id } if window_id == window.id() => 
                 match event 
                 {
                     WindowEvent::KeyboardInput { event: winit::event::KeyEvent { 
@@ -86,27 +72,31 @@ impl Rulf3D {
 						};
 					},
                     WindowEvent::CursorMoved { position, .. } => {
+                        // TODO: Turning is too stiff
+                        let center = PhysicalPosition {x: window.inner_size().width / 2, y: window.inner_size().height / 2};
+                        let _ = window.set_cursor_position(center);
                         let pos = glam::vec2(position.x as f32, position.y as f32);
-                        let rel = pos - last_mouse_pos;
-                        last_mouse_pos = pos;
+                        let rel = pos - glam::vec2(center.x as f32, center.y as f32);
                         input_state.set_mouse_x_relative(rel.x);
                     },
                     WindowEvent::RedrawRequested => {
                         if draw_minimap {
-                            minimap_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
+                            minimap_renderer.render(&webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
                         }
                         else {
-                            firstperson_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
+                            firstperson_renderer.render(&webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
                         }
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
                     WindowEvent::Resized(physical_size) if physical_size.width > 0 && physical_size.height > 0 
-					=> rulf3d.webgpu.reconfigure_surface_size(physical_size.width, physical_size.height),
+					=> webgpu.reconfigure_surface_size(physical_size.width, physical_size.height),
                     _ => ()
                 },
-                // Event::NewEvents(StartCause::Init) =>{
-                //     // NOTE: startup things
-                // }
+                Event::NewEvents(StartCause::Init) =>{
+                    if let Err(e) = window.set_cursor_grab(winit::window::CursorGrabMode::Confined) {
+                        println!("{:?}", e);
+                    }
+                }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
                     let last_process_time = Instant::now().duration_since(last_process_tick);
@@ -132,11 +122,11 @@ impl Rulf3D {
                             &game_world.get_walls(), game_world.get_grid_size(), 
                             game_world.get_player_position(), game_world.get_player_forward_vector(), 100
                         ) {
-                            Some((distance, index, ..)) => rulf3d.window.set_title(format!("({:.1}, {})", distance, index).as_str()),
-                            None => rulf3d.window.set_title("None")
+                            Some((distance, index, ..)) => window.set_title(format!("({:.1}, {})", distance, index).as_str()),
+                            None => window.set_title("None")
                         }
 
-                        rulf3d.window.request_redraw();
+                        window.request_redraw();
                     }
                 },
                 Event::AboutToWait =>
@@ -146,7 +136,7 @@ impl Rulf3D {
                         elwt.set_control_flow(ControlFlow::Poll);
                     }
                     else {
-                        elwt.set_control_flow(ControlFlow::WaitUntil(Instant::now() + process_tickrate.mul_f64(0.6) - last_process_time)); 
+                        elwt.set_control_flow(ControlFlow::WaitUntil(Instant::now() + process_tickrate.mul_f64(0.5) - last_process_time)); 
                     }
                 },
                 _ => ()
