@@ -49,10 +49,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 	if abs(f32(surface_info.half_height) - pos.y) > wall_half_height {
 	 	discard;
 	}
-	// if pos.y > wall_max || pos.y < wall_min {
-	// 	discard;
-	// }
-
+	
 	return color;
 }
 

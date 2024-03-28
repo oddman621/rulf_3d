@@ -21,13 +21,30 @@ struct RaycastData {
 }
 
 pub struct Renderer {
-	wall_render: WallRender
+	wall_render: WallRender,
+	depth_texture: wgpu::Texture
 }
 
 impl Renderer {
 	pub fn render(&mut self, webgpu: &WebGPU, game_world: &GameWorld, clear_color: &wgpu::Color) {
 		let output = webgpu.surface.get_current_texture().unwrap();
+		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+		if self.depth_texture.size() != size {
+			self.depth_texture.destroy();
+			self.depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+				label: Some("Renderer::depth_texture from render()"),
+				mip_level_count: 1,
+				sample_count: 1,
+				size,
+				dimension: wgpu::TextureDimension::D2,
+				format: wgpu::TextureFormat::Depth32Float,
+				usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+				view_formats: &[]
+			});
+		}
+		let depth_view = self.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 		
 		let surface_info = SurfaceInfo {
 			width: output.texture.width(),
@@ -56,19 +73,39 @@ impl Renderer {
 						store: wgpu::StoreOp::Store
 					}
 				})],
+				depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment{
+					view: &depth_view,
+					depth_ops: Some(wgpu::Operations {
+						load: wgpu::LoadOp::Clear(1.0),
+						store: wgpu::StoreOp::Store
+					}),
+					stencil_ops: None
+				}),
 				..Default::default()
 			});
 			drop(render_pass);
 
-			self.wall_render.draw(&mut encoder, &view);
+			self.wall_render.draw(&mut encoder, &view, &depth_view);
 
 			webgpu.queue.submit(Some(encoder.finish()));
 			output.present();
 		}
 	}
 	pub fn new(webgpu: &WebGPU) -> Self {
+		let depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+			label: Some("Renderer::depth_texture"),
+			mip_level_count: 1,
+			sample_count: 1,
+			size: wgpu::Extent3d {
+				width: 1, height: 1, depth_or_array_layers: 1
+			},
+			dimension: wgpu::TextureDimension::D2,
+			format: wgpu::TextureFormat::Depth32Float,
+			usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+			view_formats: &[]
+		});
 		Self {
-			wall_render: WallRender::new(webgpu)
+			wall_render: WallRender::new(webgpu), depth_texture
 		}
 	}
 }
@@ -94,7 +131,7 @@ impl WallRender {
 		queue.write_buffer(&self.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
 		queue.write_buffer(&self.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(raycast_data));
 	}
-	pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+	pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, depth_view: &wgpu::TextureView) {
 		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("WallRender::draw()"),
 			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -104,6 +141,14 @@ impl WallRender {
 					store: wgpu::StoreOp::Store
 				}
 			})],
+			depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+				view: &depth_view,
+				depth_ops: Some(wgpu::Operations {
+					load: wgpu::LoadOp::Load,
+					store: wgpu::StoreOp::Store
+				}),
+				stencil_ops: None
+			}),
 			..Default::default()
 		});
 
@@ -283,7 +328,13 @@ impl WallRender {
 				polygon_mode: wgpu::PolygonMode::Fill,
 				conservative: false
 			},
-			depth_stencil: None,
+			depth_stencil: Some(wgpu::DepthStencilState {
+				format: wgpu::TextureFormat::Depth32Float,
+				depth_write_enabled: true,
+				depth_compare: wgpu::CompareFunction::LessEqual,
+				stencil: wgpu::StencilState::default(),
+				bias: wgpu::DepthBiasState::default()
+			}),
 			multisample: wgpu::MultisampleState::default(),
 			fragment: Some(wgpu::FragmentState {
 				module: &firstperson_wall_shader_module,
