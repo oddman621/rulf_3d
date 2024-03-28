@@ -31,18 +31,46 @@ pub fn multicast_raycols(
 
 	Ok((0..raycount).into_iter().map(|f| {
 		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
-		if let Some((dist, _texid)) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
-			from + rayvec * dist
+		if let Some((projected_dist, ..)) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
+			from + rayvec * projected_dist
 		} else {
 			glam::Vec2::ZERO
 		}
 	}).collect())
 }
 
-// Option<(거리, 벽idx)>
+pub fn multiple_raycast (
+	walls: &HashMap<glam::UVec2, u32>, gridsize: f32,
+	from: glam::Vec2, camdir: glam::Vec2, camfov: f32,
+	raycount: u32, stepnum: u32
+) -> Result<Vec<(f32, u32, f32)>, ()> {
+	let tan_half_fov = (camfov / 2.0).tan(); // cam_plane.len / camdir_len
+	if tan_half_fov.is_infinite() {
+		return Err(());
+	}
+
+	let cam_plane = camdir.perp() * 0.5;
+	let camdir_len = cam_plane.length() / tan_half_fov;
+	let camdir = camdir * camdir_len;
+
+	Ok((0..raycount).into_iter().map(|f| {
+		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
+		if let Some(sing_raycast) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
+			//from + rayvec * projected_dist // point of collision
+			sing_raycast
+		} else {
+			(f32::default(), u32::default(), f32::default())
+		}
+	}).collect())
+}
+
+// Option<(거리, 벽idx, uv.x)>
 // https://lodev.org/cgtutor/raycasting.html
 // rayvec: ray의 방향. 카메라의 방향이 아님. 항상 1의 길이가 아니며, epsilon 이상의 다양한 길이를 가짐.
-pub fn single_raycast(walls: &HashMap<glam::UVec2, u32>, gridsize: f32, from: glam::Vec2, rayvec: glam::Vec2, stepnum: u32) -> Option<(f32, u32)> {
+pub fn single_raycast(
+	walls: &HashMap<glam::UVec2, u32>, gridsize: f32, 
+	from: glam::Vec2, rayvec: glam::Vec2, stepnum: u32
+) -> Option<(f32, u32, f32)> {
 	
 
 	let tilespace_from = from / gridsize;
@@ -76,10 +104,19 @@ pub fn single_raycast(walls: &HashMap<glam::UVec2, u32>, gridsize: f32, from: gl
 		}
 
 		if let Some(texid) = walls.get(&tile_pos) {
-			return match side {
-				Side::EW => Some(((side_dist_x - delta_dist_x) * gridsize, texid.clone())),
-				Side::NS => Some(((side_dist_y - delta_dist_y) * gridsize, texid.clone()))
+			let projected_tilemap_dist = match side {
+				Side::EW => side_dist_x - delta_dist_x,
+				Side::NS => side_dist_y - delta_dist_y
 			};
+			let point_of_collision = tilespace_from + rayvec * projected_tilemap_dist;
+			let mapped_poc = point_of_collision.fract();
+			let angle = rayvec.to_angle();
+			let u_offset = match side {
+				Side::EW =>  if angle.cos() > 0.0 {mapped_poc.y} else {1.0 - mapped_poc.y},
+				Side::NS =>  if angle.sin() < 0.0 {mapped_poc.x} else {1.0 - mapped_poc.x}
+			};
+			
+			return Some((projected_tilemap_dist * gridsize, texid.clone(), u_offset));
 		}
 	}
 

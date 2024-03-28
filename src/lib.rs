@@ -35,6 +35,7 @@ mod game;
 mod input;
 mod minimap;
 mod raycasting;
+mod firstperson;
 
 pub struct Rulf3D {
 	event_loop: EventLoop<()>,
@@ -57,9 +58,10 @@ impl Rulf3D {
 		let mut rulf3d = Self::new();
 		let mut input_state = input::InputState::default();
 		let mut minimap_renderer = minimap::Renderer::new(&rulf3d.webgpu);
+        let mut firstperson_renderer = firstperson::Renderer::new(&rulf3d.webgpu);
 		let mut game_world = game::GameWorld::test_gameworld();
 
-        let mut draw_minimap = true;
+        let mut draw_minimap = false;
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
@@ -92,6 +94,9 @@ impl Rulf3D {
                     WindowEvent::RedrawRequested => {
                         if draw_minimap {
                             minimap_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
+                        }
+                        else {
+                            firstperson_renderer.render(&rulf3d.webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
                         }
 					},
                     WindowEvent::CloseRequested => elwt.exit(),
@@ -127,7 +132,7 @@ impl Rulf3D {
                             &game_world.get_walls(), game_world.get_grid_size(), 
                             game_world.get_player_position(), game_world.get_player_forward_vector(), 100
                         ) {
-                            Some((distance, index)) => rulf3d.window.set_title(format!("({:.1}, {})", distance, index).as_str()),
+                            Some((distance, index, ..)) => rulf3d.window.set_title(format!("({:.1}, {})", distance, index).as_str()),
                             None => rulf3d.window.set_title("None")
                         }
 
