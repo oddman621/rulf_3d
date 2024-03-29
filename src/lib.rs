@@ -118,7 +118,7 @@ impl Rulf3D {
 
 
                         // raycast
-                        match raycasting::single_raycast(
+                        match raycasting::wall::single_raycast(
                             &game_world.get_walls(), game_world.get_grid_size(), 
                             game_world.get_player_position(), game_world.get_player_forward_vector(), 100
                         ) {

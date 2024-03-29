@@ -51,7 +51,7 @@ impl Renderer {
 		self.wall_render.write(queue, viewproj.clone(), gridsize, walls.as_slice());
 		self.actor_render.write(queue, viewproj.clone(), 50.0f32, actor_color.clone(), actors_pos_ang.as_slice());
 
-		if let Ok(raycols) = crate::raycasting::multicast_raycols(
+		if let Ok(raycols) = crate::raycasting::wall::multicast_raycols(
 			&game_world.get_walls(), game_world.get_grid_size(), 
 			game_world.get_player_position(), game_world.get_player_forward_vector(), std::f32::consts::FRAC_PI_3, 
 			60, 100
