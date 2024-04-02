@@ -60,10 +60,12 @@ impl Renderer {
 			let raycast_data: Vec<RaycastData> = raycast.into_iter().map(|(d, t, u)| RaycastData {
 				distance: d, texid: t, u_offset: u
 			}).collect();
-			self.wall_render.write(&webgpu.queue, surface_info, &raycast_data);
+			webgpu.queue.write_buffer(&self.wall_render.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
+			webgpu.queue.write_buffer(&self.wall_render.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
+			webgpu.queue.write_buffer(&self.wall_render.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
 
 			let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-			let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 				label: Some("firstperson::Renderer::render() clearcolor render pass"),
 				color_attachments: &[Some(wgpu::RenderPassColorAttachment {
 					view: &view,
@@ -83,10 +85,13 @@ impl Renderer {
 				}),
 				..Default::default()
 			});
+
+			render_pass.set_pipeline(&self.wall_render.pipeline);
+			render_pass.set_bind_group(0, &self.wall_render.bind_groups[0], &[]);
+			render_pass.set_bind_group(1, &self.wall_render.bind_groups[1], &[]);
+			render_pass.draw(0..4, 0..1);
+
 			drop(render_pass);
-
-			self.wall_render.draw(&mut encoder, &view, &depth_view);
-
 			webgpu.queue.submit(Some(encoder.finish()));
 			output.present();
 		}
@@ -125,38 +130,6 @@ impl WallRender {
 }
 
 impl WallRender {
-	pub fn write(&mut self, queue: &wgpu::Queue, surface_info: SurfaceInfo, raycast_data: &Vec<RaycastData>) {
-		
-		queue.write_buffer(&self.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
-		queue.write_buffer(&self.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
-		queue.write_buffer(&self.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(raycast_data));
-	}
-	pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, depth_view: &wgpu::TextureView) {
-		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("WallRender::draw()"),
-			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-				view, resolve_target: None,
-				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Load,
-					store: wgpu::StoreOp::Store
-				}
-			})],
-			depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-				view: &depth_view,
-				depth_ops: Some(wgpu::Operations {
-					load: wgpu::LoadOp::Load,
-					store: wgpu::StoreOp::Store
-				}),
-				stencil_ops: None
-			}),
-			..Default::default()
-		});
-
-		render_pass.set_pipeline(&self.pipeline);
-		render_pass.set_bind_group(0, &self.bind_groups[0], &[]);
-		render_pass.set_bind_group(1, &self.bind_groups[1], &[]);
-		render_pass.draw(0..4, 0..1);
-	}
 	pub fn new(webgpu: &WebGPU) -> Self {
 		let surface_info_buffer = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::surface_info_buffer"),

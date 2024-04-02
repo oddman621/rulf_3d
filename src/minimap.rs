@@ -117,8 +117,6 @@ impl Renderer {
 			..Default::default()
 		});
 
-		//TODO: RenderBundle?
-
 		render_pass.set_pipeline(&self.wall_render.pipeline);
 		render_pass.set_bind_group(0, &self.wall_render.bind_group, &[]);
 		render_pass.set_vertex_buffer(0, self.wall_render.vb.slice(..));
