@@ -168,11 +168,11 @@ impl WallRender {
 
 		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
-		let wall_array_image = image::load_from_memory(include_bytes!("asset/array_texture.png")).unwrap();
+		let wall_array_image = image::load_from_memory(include_bytes!("asset/all_6.jpg")).unwrap();
 		let texture_array_size = wgpu::Extent3d {
-			width: wall_array_image.width(),
-			height: wall_array_image.height() / 4,
-			depth_or_array_layers: 4
+			width: wall_array_image.width() / 5,
+			height: wall_array_image.height() / 5,
+			depth_or_array_layers: 25
 		};
 		let texture_array = webgpu.device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("WallRender::_texture_array"),
@@ -184,48 +184,39 @@ impl WallRender {
 			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
 			view_formats: &[]
 		});
+
+		let image_data = wall_array_image.to_rgba8();
+
+		for layer in 1..=5 {
+			for offset in 0..=4 {
+				webgpu.queue.write_texture(
+					wgpu::ImageCopyTexture {
+						texture: &texture_array,
+						aspect: wgpu::TextureAspect::All,
+						mip_level: 0,
+						origin: wgpu::Origin3d {
+							x: 0, y: 0, z: offset,
+						}
+					}, 
+					&image_data, 
+					wgpu::ImageDataLayout {
+						bytes_per_row: Some(4 * texture_array_size.width * 5),
+						rows_per_image: Some(texture_array_size.height),
+						offset: (texture_array_size.width * 4 * offset) as u64
+					},
+					wgpu::Extent3d {
+							width: texture_array_size.width,
+							height: texture_array_size.height,
+							depth_or_array_layers: layer
+					}
+				);
+			}
+		}
+		
 		let texture_array_view = texture_array.create_view(&wgpu::TextureViewDescriptor {
 			dimension: Some(wgpu::TextureViewDimension::D2Array), ..Default::default()
 		});
 
-		
-		let image_data = wall_array_image.to_rgba8();
-		let image_copy_texture = wgpu::ImageCopyTexture {
-			texture: &texture_array,
-			aspect: wgpu::TextureAspect::All,
-			mip_level: 0,
-			origin: wgpu::Origin3d::ZERO
-		};
-		let image_data_layout = wgpu::ImageDataLayout {
-			bytes_per_row: Some(4 * texture_array_size.width),
-			rows_per_image: Some(texture_array_size.height),
-			//offset: 0, // WTF: wgpu::ImageDataLayout.offset seems be ommitted when 2 or more queue.write_texture() to same texture_array. Instead, height field must be Some.
-			..Default::default()
-		};
-		webgpu.queue.write_texture(image_copy_texture, &image_data, image_data_layout,
-			wgpu::Extent3d {
-				width: texture_array_size.width,
-				height: texture_array_size.height,
-				depth_or_array_layers: 1
-		});
-		webgpu.queue.write_texture(image_copy_texture, &image_data, image_data_layout,
-			wgpu::Extent3d {
-				width: texture_array_size.width,
-				height: texture_array_size.height,
-				depth_or_array_layers: 2
-		});
-		webgpu.queue.write_texture(image_copy_texture, &image_data, image_data_layout,
-			wgpu::Extent3d {
-				width: texture_array_size.width,
-				height: texture_array_size.height,
-				depth_or_array_layers: 3
-		});
-		webgpu.queue.write_texture(image_copy_texture, &image_data, image_data_layout,
-			wgpu::Extent3d {
-				width: texture_array_size.width,
-				height: texture_array_size.height,
-				depth_or_array_layers: 4
-		});
 
 		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("WallRender bind group layout"),
