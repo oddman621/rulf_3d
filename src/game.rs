@@ -3,10 +3,10 @@ use collision::AABB;
 
 
 #[derive(Copy, Clone)]
-enum TileType { Empty, Wall(u32) }
+enum TileType { Empty(u32, u32), Wall(u32) }
 
 struct TileMap {
-	pub data: std::collections::BTreeMap<[u32; 2], TileType>,
+	pub data: Vec<TileType>,
 	pub width: u32,
 	pub height: u32,
 	pub grid_size: f32
@@ -16,22 +16,19 @@ impl TileMap {
 	pub fn test_tilemap() -> Self {
 		const TEST_TILEMAP: [TileType; 64] = [
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0), 
-		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
-		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty,   TileType::Wall(2),
-		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(3), TileType::Empty,   TileType::Wall(3),
-		TileType::Wall(3), TileType::Empty,   TileType::Empty,   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty,   TileType::Wall(3),
-		TileType::Wall(2), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(2),
-		TileType::Wall(1), TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Empty,   TileType::Wall(1),
+		TileType::Wall(1), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(1),
+		TileType::Wall(2), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty(0, 0),   TileType::Wall(2),
+		TileType::Wall(3), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(3), TileType::Empty(0, 0),   TileType::Wall(3),
+		TileType::Wall(3), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty(0, 0),   TileType::Wall(3),
+		TileType::Wall(2), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(2),
+		TileType::Wall(1), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(1),
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0) 
 		];
 
 		let width = 8;
 		let height = 8;
-		let test_tilemap = TEST_TILEMAP.iter().enumerate().filter_map(|(idx, ty)|
-			Some(([idx as u32 % width, idx as u32 / width], *ty))
-		);
 
-		let data = std::collections::BTreeMap::<[u32; 2], TileType>::from_iter(test_tilemap);
+		let data = Vec::<TileType>::from(TEST_TILEMAP);
 
 		TileMap {
 			data, width, height,
@@ -42,11 +39,12 @@ impl TileMap {
 
 
 impl TileMap {
-		fn get_tile(&self, coord: glam::UVec2) -> Option<&TileType> {
+
+	fn get_tile(&self, coord: glam::UVec2) -> Option<&TileType> {
 		if coord.x >= self.width || coord.y >= self.height {
 			return None;
 		}
-		self.data.get(&[coord.x, coord.y])
+		self.data.get((coord.y * self.width + coord.x) as usize)
 	}
 
 	fn point_to_tile_coord(&self, point: glam::Vec2) -> glam::UVec2 {
@@ -76,7 +74,7 @@ impl TileMap {
 		retval.into_iter().filter(|p| 
 			self.get_tile(*p).is_some_and(|f| 
 				match f {
-					TileType::Empty => false,
+					TileType::Empty(_, _) => false,
 					TileType::Wall(_) => true
 				}
 		)).collect()
@@ -108,9 +106,13 @@ impl GameWorld {
 		}
 	}
 	pub fn get_walls(&self) -> std::collections::HashMap<glam::UVec2, u32> {
-		self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
-			TileType::Empty => None,
-			TileType::Wall(id) => Some((glam::uvec2(coord[0], coord[1]), id.clone()))
+		// self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
+		// 	TileType::Empty(_, _) => None,
+		// 	TileType::Wall(id) => Some((glam::uvec2(coord[0], coord[1]), id.clone()))
+		// }).collect()
+		self.tilemap.data.iter().enumerate().filter_map(|(i, ty)| match ty {
+			TileType::Empty(_, _) => None,
+			TileType::Wall(id) => Some((glam::uvec2(i as u32 % self.tilemap.width, i as u32 / self.tilemap.width), id.clone()))
 		}).collect()
 	}
 	pub fn get_grid_size(&self) -> f32 {
