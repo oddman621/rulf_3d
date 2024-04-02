@@ -27,6 +27,7 @@ Rendering: 화면 그리기. 게임장면+GUI. WebGPU, OpenGL, ...
 
  */
 
+ //TODO: Asset Managing (Texture, shader files, ...)
 
 mod webgpu;
 mod game;
