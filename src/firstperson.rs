@@ -10,8 +10,7 @@ mod floorceil;
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct SurfaceInfo {
 	width: u32,
-	half_height: u32,
-	scale: u32
+	height: u32
 }
 
 #[repr(C)]
@@ -50,8 +49,7 @@ impl Renderer {
 		
 		let surface_info = SurfaceInfo {
 			width: output.texture.width(),
-			half_height: output.texture.height() / 2,
-			scale: 1
+			height: output.texture.height()
 		};
 		let raycount = 300;
 		if let Ok(raycast) = wall::multiple_raycast(

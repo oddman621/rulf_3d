@@ -1,7 +1,6 @@
 struct SurfaceInfo {
 	width: u32,
-	half_height: u32,
-	scale: u32 // TODO: No use. Delete it or use it.
+	height: u32
 };
 
 struct RaycastData {
@@ -34,12 +33,13 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	var index = u32(f32(i32(raycount) - 1) * x_ratio);
 
 	var distance = raycast_data_array.data[index].distance;
+	var surface_half_height = f32(surface_info.height) / 2.0;
 
 	var wall_height_ratio = 250.0 / distance;
-	var wall_half_height = f32(surface_info.half_height) * wall_height_ratio;
+	var wall_half_height = surface_half_height * wall_height_ratio;
 
-	var wall_min = f32(surface_info.half_height) - wall_half_height;
-	var wall_max = f32(surface_info.half_height) + wall_half_height;
+	var wall_min = surface_half_height - wall_half_height;
+	var wall_max = surface_half_height + wall_half_height;
 
 	var u = raycast_data_array.data[index].u_offset;
 	var v = (pos.y - wall_min) / (wall_max - wall_min);
@@ -51,7 +51,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	// https://github.com/gfx-rs/naga/issues/1218#issuecomment-900499045
 	// [tl;dr] discard should be after textureSample because of
 	// non uniform control flow error (discard) with textureSample
-	if abs(f32(surface_info.half_height) - pos.y) > wall_half_height {
+	if abs(surface_half_height - pos.y) > wall_half_height {
 	 	discard;
 	}
 
