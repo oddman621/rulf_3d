@@ -29,11 +29,11 @@ Rendering: 화면 그리기. 게임장면+GUI. WebGPU, OpenGL, ...
 
  //TODO: Asset Managing (Texture, shader files, ...)
 
+mod asset;
 mod webgpu;
 mod game;
 mod input;
 mod minimap;
-mod wall;
 mod firstperson;
 
 pub struct Rulf3D;
@@ -115,16 +115,6 @@ impl Rulf3D {
 
                         if input_state.is_action_just_pressed(input::Action::ToggleMinimap) {
                             draw_minimap = !draw_minimap;
-                        }
-
-
-                        // raycast
-                        match wall::single_raycast(
-                            &game_world.get_walls(), game_world.get_grid_size(), 
-                            game_world.get_player_position(), game_world.get_player_forward_vector(), 100
-                        ) {
-                            Some((distance, index, ..)) => window.set_title(format!("({:.1}, {})", distance, index).as_str()),
-                            None => window.set_title("None")
                         }
 
                         window.request_redraw();

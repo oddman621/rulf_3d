@@ -1,3 +1,5 @@
+//TODO: move to Compute Shader
+
 /*
 DDA 알고리즘 사용. 맵의 그리드 길이가 1.0으로 일정한 정사각형.
 
