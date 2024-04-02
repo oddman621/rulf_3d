@@ -82,7 +82,9 @@ impl Renderer {
 			raycast_render: RayCastRender::new(webgpu)
 		}
 	}
+}
 
+impl Renderer {
 	pub fn render(&mut self, webgpu: &WebGPU, game_world: &GameWorld, clear_color: &wgpu::Color) {
 		// Convert game data to renderer specific
 		let cam_pos = glam::Mat4::from_translation(game_world.get_player_position().extend(0.0));
@@ -174,7 +176,6 @@ impl Renderer {
 		output.present();
 	}
 }
-
 
 impl WallRender {
 	fn new(webgpu: &WebGPU) -> Self {
