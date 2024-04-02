@@ -1,8 +1,10 @@
 use std::f32::consts::PI;
 
-use crate::raycasting;
+use crate::wall;
 use crate::webgpu::WebGPU;
 use crate::game::GameWorld;
+
+mod floorceil;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -52,7 +54,7 @@ impl Renderer {
 			scale: 1
 		};
 		let raycount = 300;
-		if let Ok(raycast) = raycasting::wall::multiple_raycast(
+		if let Ok(raycast) = wall::multiple_raycast(
 			&game_world.get_walls(), game_world.get_grid_size(), 
 			game_world.get_player_position(), game_world.get_player_forward_vector(), 
 			PI/2.0, raycount, 50

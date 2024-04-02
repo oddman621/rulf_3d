@@ -5,7 +5,7 @@ use collision::AABB;
 #[derive(Copy, Clone)]
 enum TileType { Empty(u32, u32), Wall(u32) }
 
-struct TileMap {
+pub struct TileMap {
 	pub data: Vec<TileType>,
 	pub width: u32,
 	pub height: u32,
@@ -99,6 +99,10 @@ pub struct GameWorld {
 }
 
 impl GameWorld {
+	pub fn get_tilemap(&self) ->&TileMap {
+		&self.tilemap
+	}
+
 	pub fn test_gameworld() -> Self {
 		GameWorld {
 			tilemap: TileMap::test_tilemap(),
@@ -106,13 +110,12 @@ impl GameWorld {
 		}
 	}
 	pub fn get_walls(&self) -> std::collections::HashMap<glam::UVec2, u32> {
-		// self.tilemap.data.iter().filter_map(|(coord, ty)| match ty {
-		// 	TileType::Empty(_, _) => None,
-		// 	TileType::Wall(id) => Some((glam::uvec2(coord[0], coord[1]), id.clone()))
-		// }).collect()
 		self.tilemap.data.iter().enumerate().filter_map(|(i, ty)| match ty {
 			TileType::Empty(_, _) => None,
-			TileType::Wall(id) => Some((glam::uvec2(i as u32 % self.tilemap.width, i as u32 / self.tilemap.width), id.clone()))
+			TileType::Wall(id) => Some((
+				glam::uvec2(i as u32 % self.tilemap.width, i as u32 / self.tilemap.width), 
+				id.clone()
+			))
 		}).collect()
 	}
 	pub fn get_grid_size(&self) -> f32 {
