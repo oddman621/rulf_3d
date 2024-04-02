@@ -21,7 +21,7 @@ struct RaycastData {
 }
 
 pub struct Renderer {
-	wall_render: wall::WallRender,
+	wall_data: wall::Data,
 	depth_texture: wgpu::Texture
 }
 
@@ -59,9 +59,9 @@ impl Renderer {
 			let raycast_data: Vec<RaycastData> = raycast.into_iter().map(|(d, t, u)| RaycastData {
 				distance: d, texid: t, u_offset: u
 			}).collect();
-			webgpu.queue.write_buffer(&self.wall_render.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
-			webgpu.queue.write_buffer(&self.wall_render.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
-			webgpu.queue.write_buffer(&self.wall_render.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
+			webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
+			webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
+			webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
 
 			let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 			let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -85,9 +85,9 @@ impl Renderer {
 				..Default::default()
 			});
 
-			render_pass.set_pipeline(&self.wall_render.pipeline);
-			render_pass.set_bind_group(0, &self.wall_render.bind_groups[0], &[]);
-			render_pass.set_bind_group(1, &self.wall_render.bind_groups[1], &[]);
+			render_pass.set_pipeline(&self.wall_data.pipeline);
+			render_pass.set_bind_group(0, &self.wall_data.bind_groups[0], &[]);
+			render_pass.set_bind_group(1, &self.wall_data.bind_groups[1], &[]);
 			render_pass.draw(0..4, 0..1);
 
 			drop(render_pass);
@@ -109,7 +109,7 @@ impl Renderer {
 			view_formats: &[]
 		});
 		Self {
-			wall_render: wall::WallRender::new(webgpu), depth_texture
+			wall_data: wall::Data::new(webgpu), depth_texture
 		}
 	}
 }

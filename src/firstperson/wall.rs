@@ -5,7 +5,7 @@ use crate::{
 };
 
 use super::{SurfaceInfo, RaycastData};
-pub struct WallRender {
+pub struct Data {
 	pub surface_info_buffer: wgpu::Buffer,
 	pub raycast_data_array_buffer: wgpu::Buffer,
 	_texture_array: wgpu::Texture,
@@ -15,11 +15,11 @@ pub struct WallRender {
 	pub pipeline: wgpu::RenderPipeline
 }
 
-impl WallRender {
+impl Data {
 	const MAX_RAYCOUNT: u64 = 4320; //8K
 }
 
-impl WallRender {
+impl Data {
 	pub fn new(webgpu: &WebGPU) -> Self {
 		let surface_info_buffer = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::surface_info_buffer"),
