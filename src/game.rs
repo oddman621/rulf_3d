@@ -3,7 +3,7 @@ use collision::AABB;
 
 
 #[derive(Copy, Clone)]
-enum TileType { Empty(u32, u32), Wall(u32) }
+pub enum TileType { Empty(u32, u32), Wall(u32) }
 
 pub struct TileMap {
 	pub data: Vec<TileType>,
@@ -99,9 +99,9 @@ pub struct GameWorld {
 }
 
 impl GameWorld {
-	pub fn get_tilemap(&self) ->&TileMap {
-		&self.tilemap
-	}
+	// pub fn get_tilemap(&self) ->&TileMap {
+	// 	&self.tilemap
+	// }
 
 	pub fn test_gameworld() -> Self {
 		GameWorld {

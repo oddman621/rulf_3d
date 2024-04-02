@@ -14,30 +14,6 @@ ray의 direction: (cos_a, sin_a)
 
 use std::collections::HashMap;
 
-pub fn multicast_raycols(
-	walls: &HashMap<glam::UVec2, u32>, gridsize: f32, 
-	from: glam::Vec2, camdir: glam::Vec2, camfov: f32, 
-	raycount: u32, stepnum: u32
-) -> Result<Vec<glam::Vec2>, ()> {
-	let tan_half_fov = (camfov / 2.0).tan(); // cam_plane.len / camdir_len
-	if tan_half_fov.is_infinite() {
-		return Err(());
-	}
-
-	let cam_plane = camdir.perp() * 0.5;
-	let camdir_len = cam_plane.length() / tan_half_fov;
-	let camdir = camdir * camdir_len;
-
-	Ok((0..raycount).into_iter().map(|f| {
-		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
-		if let Some((projected_dist, ..)) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
-			from + rayvec * projected_dist
-		} else {
-			glam::Vec2::ZERO
-		}
-	}).collect())
-}
-
 pub fn multiple_raycast (
 	walls: &HashMap<glam::UVec2, u32>, gridsize: f32,
 	from: glam::Vec2, camdir: glam::Vec2, camfov: f32,
