@@ -99,9 +99,9 @@ pub struct GameWorld {
 }
 
 impl GameWorld {
-	// pub fn get_tilemap(&self) ->&TileMap {
-	// 	&self.tilemap
-	// }
+	pub fn get_tilemap(&self) ->&TileMap {
+		&self.tilemap
+	}
 
 	pub fn test_gameworld() -> Self {
 		GameWorld {
