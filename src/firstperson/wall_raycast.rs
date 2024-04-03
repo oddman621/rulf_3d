@@ -28,10 +28,10 @@ pub fn multiple_raycast (
 
 	let cam_plane = camdir.perp() * 0.5;
 	let camdir_len = cam_plane.length() / tan_half_fov;
-	let camdir = camdir * camdir_len;
+	let camvec = camdir * camdir_len;
 
 	Ok((0..raycount).into_iter().map(|f| {
-		let rayvec = camdir + cam_plane * (0.5 - f as f32 / raycount as f32);
+		let rayvec = camvec + cam_plane * (0.5 - f as f32 / raycount as f32);
 		if let Some(sing_raycast) = single_raycast(walls, gridsize, from, rayvec, stepnum) {
 			//from + rayvec * projected_dist // point of collision
 			sing_raycast

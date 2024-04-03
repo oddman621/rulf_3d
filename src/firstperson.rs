@@ -48,10 +48,10 @@ impl Renderer {
 		};
 
 		let tan_half_fov = (self.fov/2.0).min(89.0).tan();
-		let cam_fwd = game_world.get_player_forward_vector();
-		let cam_plane = cam_fwd.perp() * 0.5;
+		let cam_dir = game_world.get_player_forward_vector();
+		let cam_plane = cam_dir.perp() * 0.5;
 		let cam_len = cam_plane.length() / tan_half_fov;
-		let cam_vec = cam_fwd * cam_len;
+		let cam_vec = cam_dir * cam_len;
 
 		let camera_info = CameraInfo {
 			pos: game_world.get_player_position() / game_world.get_grid_size(),
