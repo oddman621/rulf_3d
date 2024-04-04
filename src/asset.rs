@@ -4,7 +4,8 @@ impl ShaderSource {
 	pub const FILLSCREEN: &'static str = include_str!("asset/fillscreen.wgsl");
 	pub const FIRSTPERSON_WALL: &'static str = include_str!("asset/firstperson_wall.wgsl");
 	pub const FIRSTPERSON_FLOORCEIL: &'static str = include_str!("asset/firstperson_floorceil.wgsl");
-	//TODO: Move actor.wgsl str from minimap to ShaderSource
+	pub const MINIMAP_ACTOR: &'static str = include_str!("asset/minimap_actor.wgsl");
+	pub const MINIMAP_WALL: &'static str = include_str!("asset/minimap_wall.wgsl");
 }
 
 pub struct ImageByte;

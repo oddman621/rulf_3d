@@ -1,6 +1,7 @@
 use wgpu::util::DeviceExt;
 use crate::webgpu::WebGPU;
 use crate::game::GameWorld;
+use crate::asset::ShaderSource;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -289,7 +290,7 @@ impl WallRender {
 
 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender wall.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(include_str!("asset/wall.wgsl").into())
+			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_WALL.into())
 		});
 		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::render_pipeline"),
@@ -465,7 +466,7 @@ impl ActorRender {
 		});
 		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("ActorRender actor.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(include_str!("asset/actor.wgsl").into())
+			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_ACTOR.into())
 		});
 
 		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
