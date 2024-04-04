@@ -177,7 +177,7 @@ impl Data {
 		});
 		let firstperson_wall_shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender firstperson wall shader module"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL.into())
+			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL_FRAG.into())
 		});
 
 		let pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {

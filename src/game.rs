@@ -122,7 +122,7 @@ impl GameWorld {
 		self.tilemap.grid_size
 	}
 	pub fn actors_position_angle_flatten(&self) -> Vec<[f32; 3]> {
-		Vec::<[f32; 3]>::from([[self.player.position.x, self.player.position.y, self.player.angle]]) //TODO: actors_position, actors_angle 모두 현재는 player만 담긴 Vector를 반환함. 추후 player 포함 enemies 목록까지 반환하도록 구현.
+		Vec::<[f32; 3]>::from([[self.player.position.x, self.player.position.y, self.player.angle]])
 	}
 	pub fn get_player_position(&self) -> glam::Vec2 {
 		self.player.position
