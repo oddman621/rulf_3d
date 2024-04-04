@@ -47,7 +47,8 @@ fn scanline_process(
 
 	var scanline: ScanlineData;
 
-	scanline.floor_step = row_distance * (camera.rightmost_ray - camera.leftmost_ray) / f32(surface.width);
+	let cam_plane = (camera.rightmost_ray - camera.leftmost_ray);
+	scanline.floor_step = row_distance * cam_plane / f32(surface.width);
 	scanline.floor = camera.pos + row_distance * camera.leftmost_ray;
 
 	scanlines[u32(n)] = scanline;
@@ -85,18 +86,16 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 	let color_floor = textureSample(floor_texture_array, texture_sampler, uv, u32(floor_texid));
 
 	if is_floor {
-		// if floor_texid < 0 {
-		// 	discard;
-		// } else {
-		// 	return color_floor;
-		// }
-		return color_floor;
+		if floor_texid < 0 {
+			discard;
+		} else {
+			return color_floor;
+		}
 	} else {
-		// if ceil_texid < 0 {
-		// 	discard;
-		// } else {
-		// 	return color_ceil;
-		// }
-		return color_ceil;
+		if ceil_texid < 0 {
+			discard;
+		} else {
+			return color_ceil;
+		}
 	}
 }

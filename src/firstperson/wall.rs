@@ -200,7 +200,7 @@ impl Data {
 			depth_stencil: Some(wgpu::DepthStencilState {
 				format: wgpu::TextureFormat::Depth32Float,
 				depth_write_enabled: true,
-				depth_compare: wgpu::CompareFunction::LessEqual,
+				depth_compare: wgpu::CompareFunction::Always, //FIXME: If LessEqual, walls will not drawn. That is not intended.
 				stencil: wgpu::StencilState::default(),
 				bias: wgpu::DepthBiasState::default()
 			}),

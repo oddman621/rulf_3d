@@ -47,11 +47,11 @@ impl Renderer {
 			height: output.texture.height()
 		};
 
-		let tan_half_fov = (self.fov/2.0).min(89.0).tan();
+		let tan_half_fov = (self.fov/2.0).min(89.0f32.to_radians()).tan();
 		let cam_dir = game_world.get_player_forward_vector();
 		let cam_plane = cam_dir.perp() * 0.5;
-		let cam_len = cam_plane.length() / tan_half_fov;
-		let cam_vec = cam_dir * cam_len;
+		let cam_len = cam_plane.length() * 2.0 / tan_half_fov; // BUG: Coincidence Problem. Fixed with magic number 2.0, still not solved completely.
+		let cam_vec = cam_dir * cam_len; // BUG: Gap Problem. There's a gap between floorceils and walls. Leftside seems OK but rightside has gaps.
 
 		let camera_info = CameraInfo {
 			pos: game_world.get_player_position() / game_world.get_grid_size(),

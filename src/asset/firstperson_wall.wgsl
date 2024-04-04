@@ -35,7 +35,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	var distance = raycast_data_array.data[index].distance;
 	var surface_half_height = f32(surface_info.height) / 2.0;
 
-	var wall_height_ratio = 250.0 / distance;
+	var wall_height_ratio = 200.0 / distance; // BUG: Coincidence Problem. Fixing with magic number 200.0.
 	var wall_half_height = surface_half_height * wall_height_ratio;
 
 	var wall_min = surface_half_height - wall_half_height;
