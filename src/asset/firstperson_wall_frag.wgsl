@@ -62,7 +62,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 
 	var out: FragmentOutput;
 	out.color = color;
-	out.depth = 1.0; //XXX: control depth
+	out.depth = 1.0;
 	
 	return out;
 }

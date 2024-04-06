@@ -82,8 +82,13 @@ fn pixproc(w: u32, h: u32) {
 	}
 }
 
+struct FragmentOutput {
+	@location(0) color: vec4<f32>,
+	@builtin(frag_depth) depth: f32
+}
+
 @fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+fn fs_main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	pixproc(u32(pos.x), u32(pos.y));
 	let is_floor = pos.y - f32(surface.height) / 2.0 > 0.0;
 	let i = u32(pos.y) * surface.width + u32(pos.x);
@@ -94,17 +99,22 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 	let color_ceil = textureSample(ceil_texture_array, texture_sampler, uv, u32(ceil_texid));
 	let color_floor = textureSample(floor_texture_array, texture_sampler, uv, u32(floor_texid));
 
+	var out: FragmentOutput;
+
 	if is_floor {
 		if floor_texid < 0 {
 			discard;
 		} else {
-			return color_floor;
+			out.color = color_floor;
 		}
 	} else {
 		if ceil_texid < 0 {
 			discard;
 		} else {
-			return color_ceil;
+			out.color = color_ceil;
 		}
 	}
+
+	out.depth = 1.0;
+	return out;
 }
