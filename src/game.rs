@@ -16,12 +16,12 @@ impl TileMap {
 	pub fn test_tilemap() -> Self {
 		const TEST_TILEMAP: [TileType; 64] = [
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0), 
-		TileType::Wall(1), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(1),
-		TileType::Wall(2), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty(0, 0),   TileType::Wall(2),
-		TileType::Wall(3), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(3), TileType::Empty(0, 0),   TileType::Wall(3),
-		TileType::Wall(3), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Empty(0, 0),   TileType::Wall(3),
-		TileType::Wall(2), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(2),
-		TileType::Wall(1), TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Empty(0, 0),   TileType::Wall(1),
+		TileType::Wall(1), TileType::Empty(0, 1),   TileType::Empty(12, 13),   TileType::Empty(24, 25), TileType::Empty(6, 7),  TileType::Empty(8, 9),  TileType::Empty(10, 11), TileType::Wall(1),
+		TileType::Wall(2), TileType::Empty(2, 3),   TileType::Empty(14, 15),   TileType::Wall(0), 		TileType::Wall(1), 		TileType::Wall(2), 		TileType::Empty(7, 3),   TileType::Wall(2),
+		TileType::Wall(3), TileType::Empty(4, 5),   TileType::Empty(16, 17),   TileType::Empty(0, 0),   TileType::Empty(0, 0),  TileType::Wall(3), 		TileType::Empty(7, 3),   TileType::Wall(3),
+		TileType::Wall(3), TileType::Empty(6, 7),   TileType::Empty(18, 19),   TileType::Wall(0), 		TileType::Wall(1), 		TileType::Wall(2), 		TileType::Empty(7, 3),   TileType::Wall(3),
+		TileType::Wall(2), TileType::Empty(8, 9),   TileType::Empty(20, 21),   TileType::Empty(2, 5),   TileType::Empty(2, 5),  TileType::Empty(2, 5),  TileType::Empty(2, 5),   TileType::Wall(2),
+		TileType::Wall(1), TileType::Empty(10, 11), TileType::Empty(22, 23),   TileType::Empty(2, 5),   TileType::Empty(2, 5),  TileType::Empty(2, 5),  TileType::Empty(2, 5),   TileType::Wall(1),
 		TileType::Wall(0), TileType::Wall(1), TileType::Wall(2), TileType::Wall(3), TileType::Wall(3), TileType::Wall(2), TileType::Wall(1), TileType::Wall(0) 
 		];
 

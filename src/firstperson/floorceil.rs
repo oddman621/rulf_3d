@@ -94,40 +94,38 @@ impl Data {
 			view_formats: &[]
 		});
 
-		// BUG: Not all 25 textures are shown properly.
-		for l in 1..=5 {
-			for o in 0..=4 {
-				let origin = wgpu::Origin3d { x: 0, y: 0, z: o };
-				let data_layout = wgpu::ImageDataLayout {
-					bytes_per_row: Some(4 * texarray_size.width * 5),
-					rows_per_image: Some(texarray_size.height),
-					offset: (texarray_size.width * 4 * o) as u64
-				};
-				let size = wgpu::Extent3d {
-					width: texarray_size.width,
-					height: texarray_size.height,
-					depth_or_array_layers: l
-				};
+		let texgrid_offset_bytes = glam::uvec2(4 * texarray_size.width, 4 * texarray_size.width * 5 * texarray_size.height);
+		for l in 0..25 {
+			let origin = wgpu::Origin3d { x: 0, y: 0, z: l};
+			let data_layout = wgpu::ImageDataLayout {
+				bytes_per_row: Some(4 * texarray_size.width * 5),
+				rows_per_image: Some(texarray_size.height),
+				offset: (texgrid_offset_bytes.x * (l % 5) + texgrid_offset_bytes.y * (l / 5)) as u64
+			};
+			let size = wgpu::Extent3d {
+				width: texarray_size.width,
+				height: texarray_size.height,
+				depth_or_array_layers: 1
+			};
 
-				webgpu.queue.write_texture(
-					wgpu::ImageCopyTexture {
-						texture: &floor_texarray,
-						aspect: wgpu::TextureAspect::All,
-						mip_level: 0,
-						origin
-					}, 
-					&imgdata, data_layout, size
-				);
-				webgpu.queue.write_texture(
-					wgpu::ImageCopyTexture {
-						texture: &ceil_texarray,
-						aspect: wgpu::TextureAspect::All,
-						mip_level: 0,
-						origin
-					},
-					&imgdata, data_layout, size
-				);
-			}
+			webgpu.queue.write_texture(
+				wgpu::ImageCopyTexture {
+					texture: &floor_texarray,
+					aspect: wgpu::TextureAspect::All,
+					mip_level: 0,
+					origin
+				}, 
+				&imgdata, data_layout, size
+			);
+			webgpu.queue.write_texture(
+				wgpu::ImageCopyTexture {
+					texture: &ceil_texarray,
+					aspect: wgpu::TextureAspect::All,
+					mip_level: 0,
+					origin
+				},
+				&imgdata, data_layout, size
+			);
 		}
 
 		let floor_texview = floor_texarray.create_view(&wgpu::TextureViewDescriptor {
