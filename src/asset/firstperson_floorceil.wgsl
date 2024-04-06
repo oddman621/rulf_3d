@@ -37,6 +37,9 @@ struct PixelInfo {
 @group(2) @binding(1) var ceil_texture_array: texture_2d_array<f32>;
 @group(2) @binding(2) var texture_sampler: sampler;
 
+// BUG: Gap Problem. There's a gap between floorceils and walls. Leftside seems OK but rightside has gaps.
+// maybe cause: gid.x starts 1 not 0?
+
 @compute @workgroup_size(1)
 fn scanline_process(
 	@builtin(global_invocation_id) gid: vec3<u32>
@@ -54,12 +57,17 @@ fn scanline_process(
 	scanlines[u32(n)] = scanline;
 }
 
+// NOTE: No use because of high gpu usage.
+// pixproc is done in fs_main(fragment).
+// Do not use this.
 @compute @workgroup_size(1)
 fn pixel_process(
 	@builtin(global_invocation_id) gid: vec3<u32>
 ) {
-	let w = gid.x;
-	let h = gid.y;
+	//pixproc(gid.x, gid.y);
+}
+
+fn pixproc(w: u32, h: u32) {
 	let i = h * surface.width + w;
 	let coord = scanlines[h].floor + scanlines[h].floor_step * f32(w);
 
@@ -76,6 +84,7 @@ fn pixel_process(
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+	pixproc(u32(pos.x), u32(pos.y));
 	let is_floor = pos.y - f32(surface.height) / 2.0 > 0.0;
 	let i = u32(pos.y) * surface.width + u32(pos.x);
 	let uv = pixels[i].texuv;

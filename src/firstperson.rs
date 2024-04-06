@@ -1,7 +1,6 @@
 use std::f32::consts::PI;
 use crate::{game::{GameWorld, TileType}, webgpu::WebGPU};
 
-mod wall_raycast;
 mod wall;
 mod floorceil;
 
@@ -22,7 +21,7 @@ struct RaycastData {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct CameraInfo {
+struct FloorCeilCameraInfo {
 	pos: glam::Vec2,
 	pos_z: f32,
 	len: f32,
@@ -30,9 +29,16 @@ struct CameraInfo {
 	rightmost_ray: glam::Vec2
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct WallCameraInfo {
+	tiledpos: glam::Vec2,
+	dirvec: glam::Vec2,
+	plane: glam::Vec2
+}
+
 pub struct Renderer {
 	pub fov: f32,
-	pub raycount: u32,
 	floorceil_data: floorceil::Data,
 	wall_data: wall::Data,
 	depth_texture: wgpu::Texture
@@ -51,40 +57,56 @@ impl Renderer {
 		let cam_dir = game_world.get_player_forward_vector();
 		let cam_plane = cam_dir.perp() * 0.5;
 		let cam_len = cam_plane.length() * 2.0 / tan_half_fov; // BUG: Coincidence Problem. Fixed with magic number 2.0, still not solved completely.
-		let cam_vec = cam_dir * cam_len; // BUG: Gap Problem. There's a gap between floorceils and walls. Leftside seems OK but rightside has gaps.
+		let cam_vec = cam_dir * cam_len;
+		let cam_pos = game_world.get_player_position() / game_world.get_grid_size();
 
-		let camera_info = CameraInfo {
-			pos: game_world.get_player_position() / game_world.get_grid_size(),
+		let floorceil_camera_info = FloorCeilCameraInfo {
+			pos: cam_pos,
 			pos_z: surface_info.height as f32 * 0.5,
 			len: cam_len,
 			leftmost_ray: cam_vec + cam_plane,
 			rightmost_ray: cam_vec - cam_plane
 		};
 
+		let wall_camera_info = WallCameraInfo {
+			tiledpos: cam_pos,
+			dirvec: cam_dir * cam_plane.length() / tan_half_fov,
+			plane: cam_plane
+		};
+
 		let tilemap = game_world.get_tilemap();
-		let tilemap_data: Vec<_> = tilemap.data.clone().into_iter().map(|ty| match ty {
+		let tilemap_empty_data: Vec<_> = tilemap.data.clone().into_iter().map(|ty| match ty {
 			TileType::Empty(t1, t2) => glam::ivec2(t1 as i32, t2 as i32),
 			TileType::Wall(_) => glam::ivec2(-1, -1)
+		}).collect();
+		let tilemap_wall_data: Vec<_> = tilemap.data.clone().into_iter().map(|ty| match ty {
+			TileType::Empty(_, _) => -1,
+			TileType::Wall(id) => id as i32
 		}).collect();
 		let tilemap_size = glam::uvec2(tilemap.width, tilemap.height);
 
 		webgpu.queue.write_buffer(&self.floorceil_data.surface_info, 0, bytemuck::cast_slice(&[surface_info]));
-		webgpu.queue.write_buffer(&self.floorceil_data.camera_info, 0, bytemuck::cast_slice(&[camera_info]));
+		webgpu.queue.write_buffer(&self.floorceil_data.camera_info, 0, bytemuck::cast_slice(&[floorceil_camera_info]));
 		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, 0, bytemuck::cast_slice(&[tilemap_size]));
-		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_data));
+		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_empty_data));
 
-		if let Ok(raycast) = wall_raycast::multiple_raycast(
-			&game_world.get_walls(), game_world.get_grid_size(), 
-			game_world.get_player_position(), game_world.get_player_forward_vector(), 
-			self.fov, self.raycount, 50
-		) {
-			let raycast_data: Vec<RaycastData> = raycast.into_iter().map(|(d, t, u)| RaycastData {
-				distance: d, texid: t, u_offset: u
-			}).collect();
-			webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
-			webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
-			webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
-		}
+		// if let Ok(raycast) = wall_raycast::multiple_raycast(
+		// 	&game_world.get_walls(), game_world.get_grid_size(), 
+		// 	game_world.get_player_position(), game_world.get_player_forward_vector(), 
+		// 	self.fov, self.raycount, 50
+		// ) {
+		// 	let raycast_data: Vec<RaycastData> = raycast.into_iter().map(|(d, t, u)| RaycastData {
+		// 		distance: d, texid: t, u_offset: u
+		// 	}).collect();
+		// 	webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
+		// 	webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
+		// 	webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
+		// }
+		webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
+		webgpu.queue.write_buffer(&self.wall_data.camera_info, 0, bytemuck::cast_slice(&[wall_camera_info]));
+		webgpu.queue.write_buffer(&self.wall_data.tilemap_data, 0, bytemuck::cast_slice(&[tilemap_size]));
+		webgpu.queue.write_buffer(&self.wall_data.tilemap_data, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_wall_data));
+		webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[surface_info.width]));
 
 		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -107,10 +129,15 @@ impl Renderer {
 
 		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
+
 		let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-			label: Some("firstperson::Renderer::render() floorceil compute pass"),
+			label: Some("firstperson::Renderer::render() wall/floorceil compute pass"),
 			..Default::default()
 		});
+
+		compute_pass.set_bind_group(0, &self.wall_data.compute_bind_group, &[]);
+		compute_pass.set_pipeline(&self.wall_data.compute_pipeline);
+		compute_pass.dispatch_workgroups(surface_info.width, 1, 1);
 
 		compute_pass.set_bind_group(0, &self.floorceil_data.bind_groups[0], &[]);
 		compute_pass.set_bind_group(1, &self.floorceil_data.bind_groups[1], &[]);
@@ -119,8 +146,10 @@ impl Renderer {
 		compute_pass.set_pipeline(&self.floorceil_data.compute_pipelines[0]);
 		compute_pass.dispatch_workgroups(output.texture.height(), 1, 1);
 
-		compute_pass.set_pipeline(&self.floorceil_data.compute_pipelines[1]);
-		compute_pass.dispatch_workgroups(output.texture.width(), output.texture.height(), 1);
+		// NOTE: No use this compute pass because gpu usage is too high.
+		// The compute code will be done in fragment code.
+		// compute_pass.set_pipeline(&self.floorceil_data.compute_pipelines[1]);
+		// compute_pass.dispatch_workgroups(output.texture.width(), output.texture.height(), 1);
 
 		drop(compute_pass);
 
@@ -151,9 +180,9 @@ impl Renderer {
 		render_pass.set_bind_group(2, &self.floorceil_data.bind_groups[2], &[]);
 		render_pass.draw(0..4, 0..1);
 
-		render_pass.set_pipeline(&self.wall_data.pipeline);
-		render_pass.set_bind_group(0, &self.wall_data.bind_groups[0], &[]);
-		render_pass.set_bind_group(1, &self.wall_data.bind_groups[1], &[]);
+		render_pass.set_pipeline(&self.wall_data.render_pipeline);
+		render_pass.set_bind_group(0, &self.wall_data.render_bind_groups[0], &[]);
+		render_pass.set_bind_group(1, &self.wall_data.render_bind_groups[1], &[]);
 		render_pass.draw(0..4, 0..1);
 
 		drop(render_pass);
@@ -176,7 +205,6 @@ impl Renderer {
 		});
 		Self {
 			fov: PI / 2.0,
-			raycount: 300,
 			wall_data: wall::Data::new(webgpu), 
 			floorceil_data: floorceil::Data::new(webgpu), 
 			depth_texture

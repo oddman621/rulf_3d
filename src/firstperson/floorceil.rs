@@ -2,7 +2,7 @@ use crate::{
 	webgpu::WebGPU, 
 	asset::{ImageByte, ShaderSource}
 };
-use super::{SurfaceInfo, CameraInfo};
+use super::{SurfaceInfo, FloorCeilCameraInfo};
 
 pub struct Data {
 	pub surface_info: wgpu::Buffer,
@@ -42,7 +42,7 @@ impl Data {
 		});
 		let camera_info = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.camera_info"),
-			size: std::mem::size_of::<CameraInfo>() as u64,
+			size: std::mem::size_of::<FloorCeilCameraInfo>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
@@ -94,6 +94,7 @@ impl Data {
 			view_formats: &[]
 		});
 
+		// BUG: Not all 25 textures are shown properly.
 		for l in 1..=5 {
 			for o in 0..=4 {
 				let origin = wgpu::Origin3d { x: 0, y: 0, z: o };

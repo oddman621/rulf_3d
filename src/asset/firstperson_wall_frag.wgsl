@@ -5,7 +5,7 @@ struct SurfaceInfo {
 
 struct RaycastData {
 	distance: f32,
-	texid: u32,
+	texid: i32,
 	u_offset: f32
 };
 
@@ -27,7 +27,6 @@ struct FragmentOutput {
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
-
 	var x_ratio = pos.x / f32(surface_info.width);
 	var raycount = raycast_data_array.raycount;
 	var index = u32(f32(i32(raycount) - 1) * x_ratio);
@@ -35,7 +34,10 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	var distance = raycast_data_array.data[index].distance;
 	var surface_half_height = f32(surface_info.height) / 2.0;
 
-	var wall_height_ratio = 200.0 / distance; // BUG: Coincidence Problem. Fixing with magic number 200.0.
+	// BUG: Coincidence Problem. Fixing with magic number 2.0.
+	// BUG: Gap problem. Fixing with magic number adding 0.05.
+	// 2.0 for coincidence walkaround, 0.05 for gap walkaround => 2.05
+	var wall_height_ratio = 2.05 / distance;//205.0 / distance; 
 	var wall_half_height = surface_half_height * wall_height_ratio;
 
 	var wall_min = surface_half_height - wall_half_height;
@@ -54,10 +56,13 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	if abs(surface_half_height - pos.y) > wall_half_height {
 	 	discard;
 	}
+	if layer < 0 {
+		discard;
+	}
 
 	var out: FragmentOutput;
 	out.color = color;
-	out.depth = 1.0;
+	out.depth = 1.0; //XXX: control depth
 	
 	return out;
 }
