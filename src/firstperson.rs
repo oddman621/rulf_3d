@@ -204,7 +204,9 @@ impl Renderer {
 			view_formats: &[]
 		});
 		Self {
-			fov: PI / 2.0,
+			// BUG: Gap Problem. There's a gap between floorceils and walls. Both leftside and rightside has gaps but the rightside seems bigger.
+			// Fixing by magic number. Why does fov value influence floorceil's height?
+			fov: PI / 2.3,
 			wall_data: wall::Data::new(webgpu), 
 			floorceil_data: floorceil::Data::new(webgpu), 
 			depth_texture

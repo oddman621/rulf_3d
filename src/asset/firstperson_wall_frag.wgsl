@@ -34,10 +34,8 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 	var distance = raycast_data_array.data[index].distance;
 	var surface_half_height = f32(surface_info.height) / 2.0;
 
-	// BUG: Coincidence Problem. Fixing with magic number 2.0.
-	// BUG: Gap problem. Fixing with magic number adding 0.05.
-	// 2.0 for coincidence walkaround, 0.05 for gap walkaround => 2.05
-	var wall_height_ratio = 2.05 / distance;//205.0 / distance; 
+	//NOTE: wall height factor(2.5) here. It seems wrong...?
+	var wall_height_ratio = 2.5 / distance;
 	var wall_half_height = surface_half_height * wall_height_ratio;
 
 	var wall_min = surface_half_height - wall_half_height;

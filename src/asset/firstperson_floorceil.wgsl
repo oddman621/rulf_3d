@@ -37,9 +37,6 @@ struct PixelInfo {
 @group(2) @binding(1) var ceil_texture_array: texture_2d_array<f32>;
 @group(2) @binding(2) var texture_sampler: sampler;
 
-// BUG: Gap Problem. There's a gap between floorceils and walls. Leftside seems OK but rightside has gaps.
-// maybe cause: gid.x starts 1 not 0?
-
 @compute @workgroup_size(1)
 fn scanline_process(
 	@builtin(global_invocation_id) gid: vec3<u32>
