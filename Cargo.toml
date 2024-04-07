@@ -15,3 +15,7 @@ winit = "0.29.12"
 name = "dev"
 test = true
 bench = false
+
+# <Candidate libraries for future use>
+# audio: rodio
+# gui: iced, glyphon
