@@ -130,8 +130,8 @@ impl InputState {
 
 	// mouse
 
-	pub fn set_mouse_x_relative(&mut self, rel: f32) {
-		self.mouse_state.relative_x = rel;
+	pub fn add_mouse_x_relative(&mut self, rel: f32) {
+		self.mouse_state.relative_x += rel;
 	}
 	pub fn take_mouse_x_relative(&mut self) -> f32 {
 		let rel = self.mouse_state.relative_x;

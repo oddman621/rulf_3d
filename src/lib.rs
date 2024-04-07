@@ -1,6 +1,7 @@
 use std::{sync::Arc, time::{Duration, Instant}};
 use winit::{
-    dpi::PhysicalPosition, event::{Event, StartCause, WindowEvent}, event_loop::{ControlFlow, EventLoop}, window::Window
+    event::{Event, StartCause, WindowEvent}, event_loop::{ControlFlow, EventLoop}, 
+    window::Window
 };
 
 /*
@@ -37,7 +38,6 @@ mod firstperson;
 
 pub struct Rulf3D;
 
-
 impl Rulf3D {
 	pub fn testrun() -> Result<(), winit::error::EventLoopError> {
 		let event_loop = EventLoop::new().unwrap();
@@ -52,14 +52,24 @@ impl Rulf3D {
 
 		let process_tickrate = Duration::from_secs_f64(60.0f64.recip());
         let mut last_process_tick = Instant::now();
+        let mut focused = false;
 
         event_loop.run(
             move |event, elwt| 
             match event 
             {
+                Event::DeviceEvent { event: winit::event::DeviceEvent::MouseMotion { delta: (x, _) }, .. } => { // NOTE: delta is not that accurate
+                    if focused {
+                        input_state.add_mouse_x_relative((x * 0.033) as f32);
+                    }
+                },
                 Event::WindowEvent { event, window_id } if window_id == window.id() => 
                 match event 
                 {
+                    WindowEvent::Focused(f) => {
+                        focused = f;
+                        window.set_cursor_visible(!focused);
+                    }
                     WindowEvent::KeyboardInput { event: winit::event::KeyEvent { 
 						physical_key: winit::keyboard::PhysicalKey::Code(keycode), 
 						state, repeat: false, .. 
@@ -71,14 +81,6 @@ impl Rulf3D {
 							_ => ()
 						};
 					},
-                    WindowEvent::CursorMoved { position, .. } => {
-                        // TODO: Turning is too stiff
-                        let center = PhysicalPosition {x: window.inner_size().width / 2, y: window.inner_size().height / 2};
-                        let _ = window.set_cursor_position(center);
-                        let pos = glam::vec2(position.x as f32, position.y as f32);
-                        let rel = pos - glam::vec2(center.x as f32, center.y as f32);
-                        input_state.set_mouse_x_relative(rel.x);
-                    },
                     WindowEvent::RedrawRequested => {
                         if draw_minimap {
                             minimap_renderer.render(&webgpu, &game_world, &wgpu::Color{r:0.1, g:0.2, b:0.3, a:1.0});
