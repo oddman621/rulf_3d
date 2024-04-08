@@ -2,7 +2,9 @@ use crate::{
 	webgpu::WebGPU, 
 	asset::{ImageByte, ShaderSource}
 };
-use super::{SurfaceInfo, FloorCeilCameraInfo};
+use super::{SurfaceInfo, FloorCeilCameraInfo, ScanlineData};
+
+
 
 pub struct Data {
 	pub surface_info: wgpu::Buffer,
@@ -28,7 +30,6 @@ impl Data {
 	const MAX_WIDTH: u64 = 3840;
 	const MAX_HEIGHT: u64 = 2160;
 
-	const SCANLINEDATA_SIZE: u64 = std::mem::size_of::<glam::Vec2>() as u64 * 2;
 	const PIXELINFO_SIZE: u64 = std::mem::size_of::<glam::IVec2>() as u64 + std::mem::size_of::<glam::Vec2>() as u64;
 }
 
@@ -55,7 +56,7 @@ impl Data {
 
 		let scanlines = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data._scanlines"),
-			size: Self::SCANLINEDATA_SIZE * Self::MAX_HEIGHT,
+			size: std::mem::size_of::<ScanlineData>() as u64 * Self::MAX_HEIGHT,
 			usage: wgpu::BufferUsages::STORAGE,
 			mapped_at_creation: false
 		});

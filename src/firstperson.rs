@@ -4,6 +4,9 @@ use crate::{game::{GameWorld, TileType}, webgpu::WebGPU};
 mod wall;
 mod floorceil;
 
+const CAMERA_NEAR: f32 = 0.0;
+const CAMERA_FAR: f32 = 100.0;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct SurfaceInfo {
@@ -15,8 +18,17 @@ struct SurfaceInfo {
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct RaycastData {
 	distance: f32,
+	depth: f32,
 	texid: u32,
 	u_offset: f32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct ScanlineData {
+	depth: f32,
+	floor: glam::Vec2,
+	floor_step: glam::Vec2
 }
 
 #[repr(C)]
@@ -26,7 +38,9 @@ struct FloorCeilCameraInfo {
 	pos_z: f32,
 	len: f32,
 	leftmost_ray: glam::Vec2,
-	rightmost_ray: glam::Vec2
+	rightmost_ray: glam::Vec2,
+	near: f32,
+	far: f32
 }
 
 #[repr(C)]
@@ -34,7 +48,9 @@ struct FloorCeilCameraInfo {
 struct WallCameraInfo {
 	tiledpos: glam::Vec2,
 	dirvec: glam::Vec2,
-	plane: glam::Vec2
+	plane: glam::Vec2,
+	near: f32,
+	far: f32
 }
 
 pub struct Renderer {
@@ -65,13 +81,17 @@ impl Renderer {
 			pos_z: surface_info.height as f32 * 0.5,
 			len: cam_len,
 			leftmost_ray: cam_vec + cam_plane,
-			rightmost_ray: cam_vec - cam_plane
+			rightmost_ray: cam_vec - cam_plane,
+			near: CAMERA_NEAR,
+			far: CAMERA_FAR
 		};
 
 		let wall_camera_info = WallCameraInfo {
 			tiledpos: cam_pos,
 			dirvec: cam_dir * cam_plane.length() / tan_half_fov,
-			plane: cam_plane
+			plane: cam_plane,
+			near: CAMERA_NEAR,
+			far: CAMERA_FAR
 		};
 
 		let tilemap = game_world.get_tilemap();
@@ -90,18 +110,6 @@ impl Renderer {
 		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, 0, bytemuck::cast_slice(&[tilemap_size]));
 		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_empty_data));
 
-		// if let Ok(raycast) = wall_raycast::multiple_raycast(
-		// 	&game_world.get_walls(), game_world.get_grid_size(), 
-		// 	game_world.get_player_position(), game_world.get_player_forward_vector(), 
-		// 	self.fov, self.raycount, 50
-		// ) {
-		// 	let raycast_data: Vec<RaycastData> = raycast.into_iter().map(|(d, t, u)| RaycastData {
-		// 		distance: d, texid: t, u_offset: u
-		// 	}).collect();
-		// 	webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
-		// 	webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[raycast_data.len() as u32]));
-		// 	webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, std::mem::size_of::<u32>() as u64, bytemuck::cast_slice(&raycast_data));
-		// }
 		webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
 		webgpu.queue.write_buffer(&self.wall_data.camera_info, 0, bytemuck::cast_slice(&[wall_camera_info]));
 		webgpu.queue.write_buffer(&self.wall_data.tilemap_data, 0, bytemuck::cast_slice(&[tilemap_size]));
@@ -126,9 +134,7 @@ impl Renderer {
 		}
 		let depth_view = self.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 	
-
 		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-
 
 		let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
 			label: Some("firstperson::Renderer::render() wall/floorceil compute pass"),

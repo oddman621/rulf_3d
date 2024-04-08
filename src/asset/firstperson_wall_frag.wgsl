@@ -5,6 +5,7 @@ struct SurfaceInfo {
 
 struct RaycastData {
 	distance: f32,
+	depth: f32,
 	texid: i32,
 	u_offset: f32
 };
@@ -60,7 +61,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 
 	var out: FragmentOutput;
 	out.color = color;
-	out.depth = 1.0;
+	out.depth = raycast_data_array.data[index].depth;
 	
 	return out;
 }

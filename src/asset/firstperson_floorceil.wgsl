@@ -8,7 +8,9 @@ struct CameraInfo {
 	pos_z: f32,
 	len: f32,
 	leftmost_ray: vec2<f32>,
-	rightmost_ray: vec2<f32>
+	rightmost_ray: vec2<f32>,
+	near: f32,
+	far: f32
 }
 
 struct TileMapInfo {
@@ -17,6 +19,7 @@ struct TileMapInfo {
 }
 
 struct ScanlineData {
+	depth: f32,
 	floor: vec2<f32>,
 	floor_step: vec2<f32>
 }
@@ -50,6 +53,7 @@ fn scanline_process(
 	let cam_plane = (camera.rightmost_ray - camera.leftmost_ray);
 	scanline.floor_step = row_distance * cam_plane / f32(surface.width);
 	scanline.floor = camera.pos + row_distance * camera.leftmost_ray;
+	scanline.depth = (row_distance * 2.0 - camera.near) / (camera.far - camera.near); // XXX: Coincidence Workaround Side Effect. Remultiply magic number here.
 
 	scanlines[u32(n)] = scanline;
 }
@@ -112,6 +116,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> FragmentOutput {
 		}
 	}
 
-	out.depth = 1.0;
+	out.depth = scanlines[u32(pos.y)].depth;
 	return out;
 }

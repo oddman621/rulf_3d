@@ -7,7 +7,9 @@ struct SurfaceInfo {
 struct CameraInfo {
 	tiledpos: vec2<f32>,
 	dirvec: vec2<f32>,
-	plane: vec2<f32>
+	plane: vec2<f32>,
+	near: f32,
+	far: f32
 }
 
 struct TileMapInfo {
@@ -17,6 +19,7 @@ struct TileMapInfo {
 
 struct RaycastData {
 	distance: f32,
+	depth: f32,
 	texid: i32,
 	u_offset: f32
 }
@@ -97,12 +100,14 @@ fn raycast(rayvec: vec2<f32>) -> RaycastData {
 					break;
 				}
 			}
+			result.depth = (result.distance - camera.near) / (camera.far - camera.near);
 			return result;
 		}
 	}
 
 	var defval: RaycastData;
 	defval.distance = 0.0;
+	defval.depth = 1.0;
 	defval.texid = -1;
 	defval.u_offset = 0.0;
 	return defval;
