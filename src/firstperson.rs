@@ -1,5 +1,9 @@
 use std::f32::consts::PI;
-use crate::{game::{GameWorld, TileType}, webgpu::{WebGPU, WebGPUDevice, WebGPUSurface}};
+use crate::{
+	game::{GameWorld, TileType}, 
+	webgpu::{WebGPU, WebGPUDevice, WebGPUSurface},
+	asset::AssetServer
+};
 
 mod wall;
 mod floorceil;
@@ -198,7 +202,7 @@ impl Renderer {
 		queue.submit(Some(encoder.finish()));
 		output.present();
 	}
-	pub fn new(webgpu: &WebGPU, asset_server: &crate::asset::AssetServer) -> Self {
+	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, _) = webgpu.get_device();
 		let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("Renderer::depth_texture"),
@@ -217,7 +221,7 @@ impl Renderer {
 			// Fixing by magic number. Why does fov value influence floorceil's height?
 			fov: PI / 2.3,
 			wall_data: wall::Data::new(webgpu, asset_server), 
-			floorceil_data: floorceil::Data::new(webgpu), 
+			floorceil_data: floorceil::Data::new(webgpu, asset_server), 
 			depth_texture
 		}
 	}

@@ -47,7 +47,7 @@ impl Rulf3D {
         let (device, queue) = webgpu.get_device();
         let asset_server = asset::AssetServer::create_test_asset_server(device, queue);
 		let mut input_state = input::InputState::default();
-		let mut minimap_renderer = minimap::Renderer::new(&webgpu);
+		let mut minimap_renderer = minimap::Renderer::new(&webgpu, &asset_server);
         let mut firstperson_renderer = firstperson::Renderer::new(&webgpu, &asset_server);
 		let mut game_world = game::GameWorld::test_gameworld();
 

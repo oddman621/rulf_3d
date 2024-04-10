@@ -2,6 +2,7 @@ use wgpu::util::DeviceExt;
 use crate::webgpu::{WebGPU, WebGPUDevice, WebGPUSurface, WebGPUConfig};
 use crate::game::GameWorld;
 use crate::asset::ShaderSource;
+use crate::asset::AssetServer;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -17,7 +18,6 @@ struct WallRender {
 	instb_len: u32,
 	viewproj_ub: wgpu::Buffer,
 	gridsize_ub: wgpu::Buffer,
-	_texture_array: wgpu::Texture,
 	_texture_array_view: wgpu::TextureView,
 	_texture_sampler: wgpu::Sampler,
 	bind_group: wgpu::BindGroup,
@@ -62,9 +62,9 @@ pub struct Renderer {
 }
 
 impl Renderer {
-	pub fn new(webgpu: &WebGPU) -> Self {
+	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		Self { 
-			wall_render: WallRender::new(webgpu), 
+			wall_render: WallRender::new(webgpu, asset_server), 
 			actor_render: ActorRender::new(webgpu),
 		}
 	}
@@ -138,7 +138,7 @@ impl Renderer {
 }
 
 impl WallRender {
-	fn new(webgpu: &WebGPU) -> Self {
+	fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, queue) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("WallRender::vb"),
@@ -169,50 +169,7 @@ impl WallRender {
 
 		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
-		let wall_array_image = image::load_from_memory(include_bytes!("asset/all_6.jpg")).unwrap();
-		let texture_array_size = wgpu::Extent3d {
-			width: wall_array_image.width() / 5,
-			height: wall_array_image.height() / 5,
-			depth_or_array_layers: 25
-		};
-		let texture_array = device.create_texture(&wgpu::TextureDescriptor {
-			label: Some("WallRender::_texture_array"),
-			size: texture_array_size,
-			mip_level_count: 1,
-			sample_count: 1,
-			dimension: wgpu::TextureDimension::D2,
-			format: wgpu::TextureFormat::Rgba8UnormSrgb,
-			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-			view_formats: &[]
-		});
-
-		let image_data = wall_array_image.to_rgba8();
-
-		for layer in 1..=5 {
-			for offset in 0..=4 {
-				queue.write_texture(
-					wgpu::ImageCopyTexture {
-						texture: &texture_array,
-						aspect: wgpu::TextureAspect::All,
-						mip_level: 0,
-						origin: wgpu::Origin3d {
-							x: 0, y: 0, z: offset,
-						}
-					}, 
-					&image_data, 
-					wgpu::ImageDataLayout {
-						bytes_per_row: Some(4 * texture_array_size.width * 5),
-						rows_per_image: Some(texture_array_size.height),
-						offset: (texture_array_size.width * 4 * offset) as u64
-					},
-					wgpu::Extent3d {
-							width: texture_array_size.width,
-							height: texture_array_size.height,
-							depth_or_array_layers: layer
-					}
-				);
-			}
-		}
+		let texture_array = asset_server.get_texture("all_6").unwrap();
 		
 		let texture_array_view = texture_array.create_view(&wgpu::TextureViewDescriptor {
 			dimension: Some(wgpu::TextureViewDimension::D2Array), ..Default::default()
@@ -365,7 +322,7 @@ impl WallRender {
 
 		Self {
 			vb, instb, instb_len: 0, viewproj_ub, gridsize_ub, bind_group, pipeline: render_pipeline,
-			_texture_array: texture_array, _texture_array_view: texture_array_view, _texture_sampler: texture_sampler
+			_texture_array_view: texture_array_view, _texture_sampler: texture_sampler
 		}
 	}
 }

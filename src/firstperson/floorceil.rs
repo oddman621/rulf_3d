@@ -1,6 +1,7 @@
 use crate::{
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig}, 
-	asset::{ImageByte, ShaderSource}
+	asset::ShaderSource,
+	asset::AssetServer
 };
 use super::{SurfaceInfo, FloorCeilCameraInfo, ScanlineData};
 
@@ -18,8 +19,6 @@ pub struct Data {
 	_scanlines: wgpu::Buffer,
 	_pixels: wgpu::Buffer,
 
-	_floor_texarray: wgpu::Texture,
-	_ceil_texarray: wgpu::Texture,
 	_floor_texview: wgpu::TextureView,
 	_ceil_texview: wgpu::TextureView,
 	_sampler: wgpu::Sampler	
@@ -34,7 +33,7 @@ impl Data {
 }
 
 impl Data {
-	pub fn new(webgpu: &WebGPU) -> Self {
+	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, queue) = webgpu.get_device();
 		let surface_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.surface_info"),
@@ -68,74 +67,14 @@ impl Data {
 			mapped_at_creation: false
 		});
 
-		let array_image = image::load_from_memory(ImageByte::ALL_6).unwrap();
-		let imgdata = array_image.to_rgba8();
-		let texarray_size = wgpu::Extent3d {
-			width: array_image.width() / 5,
-			height: array_image.height() / 5,
-			depth_or_array_layers: 25
-		};
-		let floor_texarray = device.create_texture(&wgpu::TextureDescriptor {
-			label: Some("floorceil::Data._floor_texarray"),
-			size: texarray_size,
-			mip_level_count: 1,
-			sample_count: 1,
-			dimension: wgpu::TextureDimension::D2,
-			format: wgpu::TextureFormat::Rgba8UnormSrgb,
-			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-			view_formats: &[]
-		});
-		let ceil_texarray = device.create_texture(&wgpu::TextureDescriptor {
-			label: Some("floorceil::Data._ceil_texarray"),
-			size: texarray_size,
-			mip_level_count: 1,
-			sample_count: 1,
-			dimension: wgpu::TextureDimension::D2,
-			format: wgpu::TextureFormat::Rgba8UnormSrgb,
-			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-			view_formats: &[]
-		});
-
-		let texgrid_offset_bytes = glam::uvec2(4 * texarray_size.width, 4 * texarray_size.width * 5 * texarray_size.height);
-		for l in 0..25 {
-			let origin = wgpu::Origin3d { x: 0, y: 0, z: l};
-			let data_layout = wgpu::ImageDataLayout {
-				bytes_per_row: Some(4 * texarray_size.width * 5),
-				rows_per_image: Some(texarray_size.height),
-				offset: (texgrid_offset_bytes.x * (l % 5) + texgrid_offset_bytes.y * (l / 5)) as u64
-			};
-			let size = wgpu::Extent3d {
-				width: texarray_size.width,
-				height: texarray_size.height,
-				depth_or_array_layers: 1
-			};
-
-			queue.write_texture(
-				wgpu::ImageCopyTexture {
-					texture: &floor_texarray,
-					aspect: wgpu::TextureAspect::All,
-					mip_level: 0,
-					origin
-				}, 
-				&imgdata, data_layout, size
-			);
-			queue.write_texture(
-				wgpu::ImageCopyTexture {
-					texture: &ceil_texarray,
-					aspect: wgpu::TextureAspect::All,
-					mip_level: 0,
-					origin
-				},
-				&imgdata, data_layout, size
-			);
-		}
-
-		let floor_texview = floor_texarray.create_view(&wgpu::TextureViewDescriptor {
+		let tex_array = asset_server.get_texture("all_6").unwrap();
+		
+		let floor_texview = tex_array.create_view(&wgpu::TextureViewDescriptor {
 			label: Some("floorceil::Data._floor_texview"),
 			dimension: Some(wgpu::TextureViewDimension::D2Array),
 			..Default::default()
 		});
-		let ceil_texview = ceil_texarray.create_view(&wgpu::TextureViewDescriptor {
+		let ceil_texview = tex_array.create_view(&wgpu::TextureViewDescriptor {
 			label: Some("floorceil::Data._ceil_texview"),
 			dimension: Some(wgpu::TextureViewDimension::D2Array),
 			..Default::default()
@@ -359,9 +298,8 @@ impl Data {
 
 		Self {
 			surface_info, camera_info, tilemap_info, bind_groups, compute_pipelines, render_pipeline,
-			_scanlines: scanlines, _pixels: pixels, _floor_texarray: floor_texarray,
-			_ceil_texarray: ceil_texarray, _floor_texview: floor_texview,
-			_ceil_texview: ceil_texview, _sampler: sampler
+			_scanlines: scanlines, _pixels: pixels, 
+			_floor_texview: floor_texview, _ceil_texview: ceil_texview, _sampler: sampler
 		}
 	}
 }

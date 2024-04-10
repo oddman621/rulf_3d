@@ -15,12 +15,6 @@ impl ShaderSource {
     pub const MINIMAP_WALL: &'static str = include_str!("asset/minimap_wall.wgsl");
 }
  
-pub struct ImageByte;
- 
-impl ImageByte {
-    pub const ALL_6: &'static [u8] = include_bytes!("asset/all_6.jpg");
-}
- 
 pub struct AssetServer { //TODO: AssetServer
     shaders: HashMap<&'static str, wgpu::ShaderModule>,
     images: HashMap<&'static str, image::DynamicImage>,
@@ -210,9 +204,6 @@ impl AssetServer {
 				self.textures.insert(name, texture);
 				Ok(())
 			},
-			TextureType::Partial { x, y, width, height } => {
-				todo!()
-			},
 			TextureType::Grid { order, x, y } => {
 				let length = x * y;
 				if length == 0 {
@@ -265,6 +256,9 @@ impl AssetServer {
 
 				self.textures.insert(name, texture);
 				Ok(())
+			},
+			TextureType::Partial { x, y, width, height } => {
+				todo!()
 			},
 			TextureType::PaddingGrid { order, x, y, left, right, top, bottom } => {
 				todo!()
