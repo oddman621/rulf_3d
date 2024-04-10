@@ -1,4 +1,5 @@
 use std::{sync::Arc, time::{Duration, Instant}};
+use webgpu::WebGPUDevice;
 use winit::{
     event::{Event, StartCause, WindowEvent}, event_loop::{ControlFlow, EventLoop}, 
     window::Window
@@ -43,9 +44,11 @@ impl Rulf3D {
 		let event_loop = EventLoop::new().unwrap();
 		let window = Arc::new(Window::new(&event_loop).unwrap());
 		let mut webgpu = webgpu::WebGPU::new(window.clone());
+        let (device, queue) = webgpu.get_device();
+        let asset_server = asset::AssetServer::create_test_asset_server(device, queue);
 		let mut input_state = input::InputState::default();
 		let mut minimap_renderer = minimap::Renderer::new(&webgpu);
-        let mut firstperson_renderer = firstperson::Renderer::new(&webgpu);
+        let mut firstperson_renderer = firstperson::Renderer::new(&webgpu, &asset_server);
 		let mut game_world = game::GameWorld::test_gameworld();
 
         let mut draw_minimap = false;

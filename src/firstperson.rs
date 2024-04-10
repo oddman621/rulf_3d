@@ -198,7 +198,7 @@ impl Renderer {
 		queue.submit(Some(encoder.finish()));
 		output.present();
 	}
-	pub fn new(webgpu: &WebGPU) -> Self {
+	pub fn new(webgpu: &WebGPU, asset_server: &crate::asset::AssetServer) -> Self {
 		let (device, _) = webgpu.get_device();
 		let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("Renderer::depth_texture"),
@@ -216,7 +216,7 @@ impl Renderer {
 			// BUG: Gap Problem. There's a gap between floorceils and walls. Both leftside and rightside has gaps but the rightside seems bigger.
 			// Fixing by magic number. Why does fov value influence floorceil's height?
 			fov: PI / 2.3,
-			wall_data: wall::Data::new(webgpu), 
+			wall_data: wall::Data::new(webgpu, asset_server), 
 			floorceil_data: floorceil::Data::new(webgpu), 
 			depth_texture
 		}

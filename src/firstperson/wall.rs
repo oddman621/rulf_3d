@@ -1,7 +1,7 @@
 
 use crate::{
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
-	asset::{ShaderSource, ImageByte}
+	asset::ShaderSource
 };
 
 use super::{SurfaceInfo, RaycastData, WallCameraInfo};
@@ -12,7 +12,6 @@ pub struct Data {
 	pub camera_info: wgpu::Buffer,
 	pub tilemap_data: wgpu::Buffer,
 	pub raycast_data_array_buffer: wgpu::Buffer,
-	_texture_array: wgpu::Texture,
 	_texture_view: wgpu::TextureView,
 	_texture_sampler: wgpu::Sampler,
 	pub compute_bind_group: wgpu::BindGroup,
@@ -28,7 +27,7 @@ impl Data {
 }
 
 impl Data {
-	pub fn new(webgpu: &WebGPU) -> Self {
+	pub fn new(webgpu: &WebGPU, asset_server: &crate::asset::AssetServer) -> Self {
 		let (device, queue) = webgpu.get_device();
 		let surface_info_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::surface_info_buffer"),
@@ -58,50 +57,7 @@ impl Data {
 
 		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
-		let wall_array_image = image::load_from_memory(ImageByte::ALL_6).unwrap();
-		let texture_array_size = wgpu::Extent3d {
-			width: wall_array_image.width() / 5,
-			height: wall_array_image.height() / 5,
-			depth_or_array_layers: 25
-		};
-		let texture_array = device.create_texture(&wgpu::TextureDescriptor {
-			label: Some("WallRender::_texture_array"),
-			size: texture_array_size,
-			mip_level_count: 1,
-			sample_count: 1,
-			dimension: wgpu::TextureDimension::D2,
-			format: wgpu::TextureFormat::Rgba8UnormSrgb,
-			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-			view_formats: &[]
-		});
-
-		let image_data = wall_array_image.to_rgba8();
-
-		for layer in 1..=5 {
-			for offset in 0..=4 {
-				queue.write_texture(
-					wgpu::ImageCopyTexture {
-						texture: &texture_array,
-						aspect: wgpu::TextureAspect::All,
-						mip_level: 0,
-						origin: wgpu::Origin3d {
-							x: 0, y: 0, z: offset,
-						}
-					}, 
-					&image_data, 
-					wgpu::ImageDataLayout {
-						bytes_per_row: Some(4 * texture_array_size.width * 5),
-						rows_per_image: Some(texture_array_size.height),
-						offset: (texture_array_size.width * 4 * offset) as u64
-					},
-					wgpu::Extent3d {
-							width: texture_array_size.width,
-							height: texture_array_size.height,
-							depth_or_array_layers: layer
-					}
-				);
-			}
-		}
+		let texture_array = asset_server.get_texture("all_6").unwrap();
 		
 		let texture_array_view = texture_array.create_view(&wgpu::TextureViewDescriptor {
 			dimension: Some(wgpu::TextureViewDimension::D2Array), ..Default::default()
@@ -329,7 +285,6 @@ impl Data {
 			surface_info_buffer, 
 			camera_info, tilemap_data,
 			raycast_data_array_buffer,
-			_texture_array: texture_array,
 			_texture_view: texture_array_view,
 			_texture_sampler: texture_sampler,
 			render_bind_groups, render_pipeline,
