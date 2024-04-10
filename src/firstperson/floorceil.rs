@@ -1,6 +1,5 @@
 use crate::{
-	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig}, 
-	asset::ShaderSource,
+	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
 	asset::AssetServer
 };
 use super::{SurfaceInfo, FloorCeilCameraInfo, ScanlineData};
@@ -34,7 +33,7 @@ impl Data {
 
 impl Data {
 	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
-		let (device, queue) = webgpu.get_device();
+		let (device, _) = webgpu.get_device();
 		let surface_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.surface_info"),
 			size: std::mem::size_of::<SurfaceInfo>() as u64,
@@ -229,14 +228,8 @@ impl Data {
 			})
 		];
 
-		let fillscreen_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("floorceil fillscreen shader"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FILLSCREEN.into())
-		});
-		let fpfloorceil_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("floorceil first person floorceil shader"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_FLOORCEIL.into())
-		});
+		let fillscreen_shader = asset_server.get_shader("fillscreen").unwrap();
+		let fpfloorceil_shader = asset_server.get_shader("firstperson_floorceil").unwrap();
 
 		let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("floorceil pipeline layout"),
@@ -248,13 +241,13 @@ impl Data {
 			device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 				label: Some("floorceil::Data.compute_pipelines[0]"),
 				layout: Some(&pipeline_layout),
-				module: &fpfloorceil_shader,
+				module: fpfloorceil_shader,
 				entry_point: "scanline_process"
 			}),
 			device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 				label: Some("floorceil::Data.compute_pipelines[1]"),
 				layout: Some(&pipeline_layout),
-				module: &fpfloorceil_shader,
+				module: fpfloorceil_shader,
 				entry_point: "pixel_process"
 			})
 		];
@@ -263,7 +256,7 @@ impl Data {
 			label: Some("floorceil::Data.render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
-				module: &fillscreen_shader,
+				module: fillscreen_shader,
 				entry_point: "main",
 				buffers: &[]
 			},
@@ -285,7 +278,7 @@ impl Data {
 			}),
 			multisample: wgpu::MultisampleState::default(),
 			fragment: Some(wgpu::FragmentState {
-				module: &fpfloorceil_shader,
+				module: fpfloorceil_shader,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
 					format: webgpu.get_config().format,

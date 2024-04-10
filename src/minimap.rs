@@ -1,8 +1,9 @@
 use wgpu::util::DeviceExt;
-use crate::webgpu::{WebGPU, WebGPUDevice, WebGPUSurface, WebGPUConfig};
-use crate::game::GameWorld;
-use crate::asset::ShaderSource;
-use crate::asset::AssetServer;
+use crate:: {
+	webgpu::{WebGPU, WebGPUDevice, WebGPUSurface, WebGPUConfig},
+	game::GameWorld,
+	asset::AssetServer
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -65,7 +66,7 @@ impl Renderer {
 	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		Self { 
 			wall_render: WallRender::new(webgpu, asset_server), 
-			actor_render: ActorRender::new(webgpu),
+			actor_render: ActorRender::new(webgpu, asset_server),
 		}
 	}
 }
@@ -139,7 +140,7 @@ impl Renderer {
 
 impl WallRender {
 	fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
-		let (device, queue) = webgpu.get_device();
+		let (device, _) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("WallRender::vb"),
 			contents: bytemuck::cast_slice(&Self::QUAD_VERTICES),
@@ -247,15 +248,12 @@ impl WallRender {
 			push_constant_ranges: &[]
 		});
 
-		let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("WallRender wall.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_WALL.into())
-		});
+		let shader_module = asset_server.get_shader("minimap_wall").unwrap();
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
-				module: &shader_module,
+				module: shader_module,
 				entry_point: "vs_main",
 				buffers: &[
 					wgpu::VertexBufferLayout {
@@ -309,7 +307,7 @@ impl WallRender {
 			depth_stencil: None,
 			multisample: wgpu::MultisampleState::default(),
 			fragment: Some(wgpu::FragmentState {
-				module: &shader_module,
+				module: shader_module,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
 					format: webgpu.get_config().format,
@@ -328,7 +326,7 @@ impl WallRender {
 }
 
 impl ActorRender {
-	fn new(webgpu: &WebGPU) -> Self {
+	fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, _) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("ActorRender::vb"),
@@ -424,16 +422,13 @@ impl ActorRender {
 			bind_group_layouts: &[&bind_group_layout],
 			push_constant_ranges: &[]
 		});
-		let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("ActorRender actor.wgsl shader"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_ACTOR.into())
-		});
+		let shader_module = asset_server.get_shader("minimap_actor").unwrap();
 
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
 			label: Some("ActorRender::render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
-				module: &shader_module,
+				module: shader_module,
 				entry_point: "vs_main",
 				buffers: &[
 					wgpu::VertexBufferLayout {
@@ -487,7 +482,7 @@ impl ActorRender {
 			depth_stencil: None,
 			multisample: wgpu::MultisampleState::default(),
 			fragment: Some(wgpu::FragmentState {
-				module: &shader_module,
+				module: shader_module,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
 					format: webgpu.get_config().format,

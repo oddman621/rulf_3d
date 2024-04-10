@@ -1,11 +1,10 @@
 
 use crate::{
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
-	asset::ShaderSource
+	game::TileType
 };
 
 use super::{SurfaceInfo, RaycastData, WallCameraInfo};
-use crate::game::TileType;
 
 pub struct Data {
 	pub surface_info_buffer: wgpu::Buffer,
@@ -28,7 +27,7 @@ impl Data {
 
 impl Data {
 	pub fn new(webgpu: &WebGPU, asset_server: &crate::asset::AssetServer) -> Self {
-		let (device, queue) = webgpu.get_device();
+		let (device, _) = webgpu.get_device();
 		let surface_info_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::surface_info_buffer"),
 			size: std::mem::size_of::<SurfaceInfo>() as u64,
@@ -132,10 +131,7 @@ impl Data {
 			]
 		});
 
-		let firstperson_wall_compute_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("wall::Data first person wall compute shader"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL_COMPUTE.into())
-		});
+		let firstperson_wall_compute_shader = asset_server.get_shader("firstperson_wall_compute").unwrap();
 		let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("wall::Data compute pipeline layout"),
 			bind_group_layouts: &[&compute_bind_group_layout],
@@ -145,7 +141,7 @@ impl Data {
 		let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 			label: Some("wall::Data.compute_pipeline"),
 			layout: Some(&compute_pipeline_layout),
-			module: &firstperson_wall_compute_shader,
+			module: firstperson_wall_compute_shader,
 			entry_point: "multiraycast"
 		});
 
@@ -235,20 +231,14 @@ impl Data {
 			..Default::default()
 		});
 
-		let fillscreen_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("WallRender fillscreen shader module"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FILLSCREEN.into())
-		});
-		let firstperson_wall_shader_frag = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("WallRender firstperson wall shader module"),
-			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL_FRAG.into())
-		});
+		let fillscreen_shader_module = asset_server.get_shader("fillscreen").unwrap();
+		let firstperson_wall_shader_frag = asset_server.get_shader("firstperson_wall_frag").unwrap();
 
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::pipeline"),
 			layout: Some(&render_pipeline_layout),
 			vertex: wgpu::VertexState {
-				module: &fillscreen_shader_module,
+				module: fillscreen_shader_module,
 				entry_point: "main",
 				buffers: &[]
 			},
@@ -270,7 +260,7 @@ impl Data {
 			}),
 			multisample: wgpu::MultisampleState::default(),
 			fragment: Some(wgpu::FragmentState {
-				module: &firstperson_wall_shader_frag,
+				module: firstperson_wall_shader_frag,
 				entry_point: "main",
 				targets: &[Some(wgpu::ColorTargetState {
 					format: webgpu.get_config().format,

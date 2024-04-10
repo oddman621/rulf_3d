@@ -4,17 +4,6 @@ use std::io::Read;
 use std::path::Path;
 use std::collections::HashMap;
  
-pub struct ShaderSource;
- 
-impl ShaderSource {
-    pub const FILLSCREEN: &'static str = include_str!("asset/fillscreen.wgsl");
-    pub const FIRSTPERSON_WALL_COMPUTE: &'static str = include_str!("asset/firstperson_wall_compute.wgsl");
-    pub const FIRSTPERSON_WALL_FRAG: &'static str = include_str!("asset/firstperson_wall_frag.wgsl");
-    pub const FIRSTPERSON_FLOORCEIL: &'static str = include_str!("asset/firstperson_floorceil.wgsl");
-    pub const MINIMAP_ACTOR: &'static str = include_str!("asset/minimap_actor.wgsl");
-    pub const MINIMAP_WALL: &'static str = include_str!("asset/minimap_wall.wgsl");
-}
- 
 pub struct AssetServer { //TODO: AssetServer
     shaders: HashMap<&'static str, wgpu::ShaderModule>,
     images: HashMap<&'static str, image::DynamicImage>,
@@ -22,12 +11,12 @@ pub struct AssetServer { //TODO: AssetServer
 }
 
 pub enum ArrayOrder {
-	Column, Row
+	_Column, Row
 }
 
 pub enum TextureType {
-	Full,
-	Partial {
+	_Full,
+	_Partial {
 		x: u32,
 		y: u32,
 		width: u32,
@@ -38,7 +27,7 @@ pub enum TextureType {
 		x: u32,
 		y: u32
 	},
-	PaddingGrid {
+	_PaddingGrid {
 		order: ArrayOrder,
 		x: u32,
 		y: u32,
@@ -55,15 +44,35 @@ pub enum AssetServerError {
 	ReadImageFailed(image::ImageError), 
 	NameNotFound, 
 	InvalidSize, 
-	InvalidPosition
+	_InvalidPosition
 }
 
 impl AssetServer {
 	pub fn create_test_asset_server(device: &wgpu::Device, queue: &wgpu::Queue) -> AssetServer {
+		const SHADER_SOURCES: [(&'static str, &'static str); 6] = [
+			("fillscreen", "src/asset/fillscreen.wgsl"),
+			("firstperson_wall_compute", "src/asset/firstperson_wall_compute.wgsl"),
+			("firstperson_wall_frag", "src/asset/firstperson_wall_frag.wgsl"),
+			("firstperson_floorceil", "src/asset/firstperson_floorceil.wgsl"),
+			("minimap_actor", "src/asset/minimap_actor.wgsl"),
+			("minimap_wall", "src/asset/minimap_wall.wgsl"),
+		];
+		const IMAGES: [(&'static str, &'static str); 1] = [
+			("all_6", "src/asset/all_6.jpg")
+		];
+
 		let mut asset_server = AssetServer::new();
 
-		if let Err(_) = asset_server.load_image("all_6", "src/asset/all_6.jpg") {
-			panic!("Failed to load image src/asset/all_6.jpg");
+		for (name, path) in SHADER_SOURCES {
+			if let Err(_) = asset_server.load_wgsl(device, name, path) {
+				panic!("Failed to load {}", path);
+			}
+		}
+
+		for (name, path) in IMAGES {
+			if let Err(_) = asset_server.load_image(name, path) {
+				panic!("Failed to load {}", path);
+			}
 		}
 
 		if let Err(_) = asset_server.create_image_texture(
@@ -152,8 +161,12 @@ impl AssetServer {
         Ok(())
     }
 
-	pub fn get_texture(&self, name: &'static str) -> Option<&wgpu::Texture> {
+	pub fn get_texture(&self, name: &str) -> Option<&wgpu::Texture> {
 		self.textures.get(name)
+	}
+
+	pub fn get_shader(&self, name: &str) -> Option<&wgpu::ShaderModule> {
+		self.shaders.get(name)
 	}
 
 	pub fn create_image_texture(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &'static str, textype: &TextureType) -> Result<(), AssetServerError> {
@@ -168,7 +181,7 @@ impl AssetServer {
 		let data = image.to_rgba8();
 
 		match textype {
-			TextureType::Full => { // NOTE: Not Tested
+			TextureType::_Full => { // NOTE: Not Tested
 				let size = wgpu::Extent3d {
 					width: image.width(),
 					height: image.height(),
@@ -227,7 +240,7 @@ impl AssetServer {
 
 				let offset = |i| match order {
 					ArrayOrder::Row => (size.width * (i % x) + size.width * x * size.height * (i / x)) * 4,
-					ArrayOrder::Column => (size.width * x * size.height * (i % x) + size.width * (i / x)) * 4
+					ArrayOrder::_Column => (size.width * x * size.height * (i % x) + size.width * (i / x)) * 4
 				};
 
 				for l in 0..length {
@@ -257,12 +270,13 @@ impl AssetServer {
 				self.textures.insert(name, texture);
 				Ok(())
 			},
-			TextureType::Partial { x, y, width, height } => {
-				todo!()
-			},
-			TextureType::PaddingGrid { order, x, y, left, right, top, bottom } => {
-				todo!()
-			}
+			_ => todo!()
+			// TextureType::_Partial { x, y, width, height } => {
+			// 	todo!()
+			// },
+			// TextureType::_PaddingGrid { order, x, y, left, right, top, bottom } => {
+			// 	todo!()
+			// }
 		}
 	}
 }
