@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use crate::{game::{GameWorld, TileType}, webgpu::WebGPU};
+use crate::{game::{GameWorld, TileType}, webgpu::{WebGPU, WebGPUDevice, WebGPUSurface}};
 
 mod wall;
 mod floorceil;
@@ -62,7 +62,7 @@ pub struct Renderer {
 
 impl Renderer {
 	pub fn render(&mut self, webgpu: &WebGPU, game_world: &GameWorld, clear_color: &wgpu::Color) {
-		let output = webgpu.surface.get_current_texture().unwrap();
+		let output = webgpu.get_surface().get_current_texture().unwrap();
 		
 		let surface_info = SurfaceInfo {
 			width: output.texture.width(),
@@ -105,23 +105,25 @@ impl Renderer {
 		}).collect();
 		let tilemap_size = glam::uvec2(tilemap.width, tilemap.height);
 
-		webgpu.queue.write_buffer(&self.floorceil_data.surface_info, 0, bytemuck::cast_slice(&[surface_info]));
-		webgpu.queue.write_buffer(&self.floorceil_data.camera_info, 0, bytemuck::cast_slice(&[floorceil_camera_info]));
-		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, 0, bytemuck::cast_slice(&[tilemap_size]));
-		webgpu.queue.write_buffer(&self.floorceil_data.tilemap_info, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_empty_data));
+		let (device, queue) = webgpu.get_device();
 
-		webgpu.queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
-		webgpu.queue.write_buffer(&self.wall_data.camera_info, 0, bytemuck::cast_slice(&[wall_camera_info]));
-		webgpu.queue.write_buffer(&self.wall_data.tilemap_data, 0, bytemuck::cast_slice(&[tilemap_size]));
-		webgpu.queue.write_buffer(&self.wall_data.tilemap_data, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_wall_data));
-		webgpu.queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[surface_info.width]));
+		queue.write_buffer(&self.floorceil_data.surface_info, 0, bytemuck::cast_slice(&[surface_info]));
+		queue.write_buffer(&self.floorceil_data.camera_info, 0, bytemuck::cast_slice(&[floorceil_camera_info]));
+		queue.write_buffer(&self.floorceil_data.tilemap_info, 0, bytemuck::cast_slice(&[tilemap_size]));
+		queue.write_buffer(&self.floorceil_data.tilemap_info, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_empty_data));
+
+		queue.write_buffer(&self.wall_data.surface_info_buffer, 0, bytemuck::cast_slice(&[surface_info]));
+		queue.write_buffer(&self.wall_data.camera_info, 0, bytemuck::cast_slice(&[wall_camera_info]));
+		queue.write_buffer(&self.wall_data.tilemap_data, 0, bytemuck::cast_slice(&[tilemap_size]));
+		queue.write_buffer(&self.wall_data.tilemap_data, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_wall_data));
+		queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[surface_info.width]));
 
 		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
 		if self.depth_texture.size() != size {
 			self.depth_texture.destroy();
-			self.depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+			self.depth_texture = device.create_texture(&wgpu::TextureDescriptor {
 				label: Some("Renderer::depth_texture from render()"),
 				mip_level_count: 1,
 				sample_count: 1,
@@ -134,7 +136,7 @@ impl Renderer {
 		}
 		let depth_view = self.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 	
-		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
 		let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
 			label: Some("firstperson::Renderer::render() wall/floorceil compute pass"),
@@ -193,11 +195,12 @@ impl Renderer {
 
 		drop(render_pass);
 
-		webgpu.queue.submit(Some(encoder.finish()));
+		queue.submit(Some(encoder.finish()));
 		output.present();
 	}
 	pub fn new(webgpu: &WebGPU) -> Self {
-		let depth_texture = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+		let (device, _) = webgpu.get_device();
+		let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("Renderer::depth_texture"),
 			mip_level_count: 1,
 			sample_count: 1,

@@ -1,6 +1,6 @@
 
 use crate::{
-	webgpu::WebGPU,
+	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
 	asset::{ShaderSource, ImageByte}
 };
 
@@ -29,25 +29,26 @@ impl Data {
 
 impl Data {
 	pub fn new(webgpu: &WebGPU) -> Self {
-		let surface_info_buffer = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let (device, queue) = webgpu.get_device();
+		let surface_info_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::surface_info_buffer"),
 			size: std::mem::size_of::<SurfaceInfo>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let camera_info = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let camera_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("wall::Data.camera_info"),
 			size: std::mem::size_of::<WallCameraInfo>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let tilemap_data = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let tilemap_data = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("wall::Data.tilemap_data"),
 			size: std::mem::size_of::<TileType>() as u64 * Self::MAX_TILESIZE.x * Self::MAX_TILESIZE.y + Self::TILEMAP_FIELDS_DATA_SIZE,
 			usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let raycast_data_array_buffer = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let raycast_data_array_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::raycast_data_array_buffer"),
 			size: std::mem::size_of::<u32>() as u64 +  
 				std::mem::size_of::<RaycastData>() as u64 * Self::MAX_RAYCOUNT,
@@ -55,7 +56,7 @@ impl Data {
 			mapped_at_creation: false
 		});
 
-		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor::default());
+		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
 		let wall_array_image = image::load_from_memory(ImageByte::ALL_6).unwrap();
 		let texture_array_size = wgpu::Extent3d {
@@ -63,7 +64,7 @@ impl Data {
 			height: wall_array_image.height() / 5,
 			depth_or_array_layers: 25
 		};
-		let texture_array = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+		let texture_array = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("WallRender::_texture_array"),
 			size: texture_array_size,
 			mip_level_count: 1,
@@ -78,7 +79,7 @@ impl Data {
 
 		for layer in 1..=5 {
 			for offset in 0..=4 {
-				webgpu.queue.write_texture(
+				queue.write_texture(
 					wgpu::ImageCopyTexture {
 						texture: &texture_array,
 						aspect: wgpu::TextureAspect::All,
@@ -106,7 +107,7 @@ impl Data {
 			dimension: Some(wgpu::TextureViewDimension::D2Array), ..Default::default()
 		});
 
-		let compute_bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let compute_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("wall::Data compute bind group layout"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry {
@@ -152,7 +153,7 @@ impl Data {
 			]
 		});
 
-		let compute_bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+		let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("wall::Data.compute_bind_group"),
 			layout: &compute_bind_group_layout,
 			entries: &[
@@ -175,17 +176,17 @@ impl Data {
 			]
 		});
 
-		let firstperson_wall_compute_shader = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let firstperson_wall_compute_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("wall::Data first person wall compute shader"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL_COMPUTE.into())
 		});
-		let compute_pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+		let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("wall::Data compute pipeline layout"),
 			bind_group_layouts: &[&compute_bind_group_layout],
 			push_constant_ranges: &[]
 		});
 
-		let compute_pipeline = webgpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+		let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 			label: Some("wall::Data.compute_pipeline"),
 			layout: Some(&compute_pipeline_layout),
 			module: &firstperson_wall_compute_shader,
@@ -193,7 +194,7 @@ impl Data {
 		});
 
 
-		let bind_group_0_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let bind_group_0_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("WallRender bind group 0 layout: surface and raydata"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry {
@@ -219,7 +220,7 @@ impl Data {
 			]
 		});
 
-		let bind_group_1_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let bind_group_1_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("WallRender bind group 1 layout: texture array and sampler"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry {
@@ -242,7 +243,7 @@ impl Data {
 		}); 
 
 		let render_bind_groups = [
-			webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			device.create_bind_group(&wgpu::BindGroupDescriptor {
 				label: Some("WallRender::bind_groups[0]"),
 				layout: &bind_group_0_layout,
 				entries: &[
@@ -256,7 +257,7 @@ impl Data {
 					}
 				]
 			}),
-			webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			device.create_bind_group(&wgpu::BindGroupDescriptor {
 				label: Some("WallRender::bind_groups[1]"),
 				layout: &bind_group_1_layout,
 				entries: &[
@@ -272,22 +273,22 @@ impl Data {
 			})
 		];
 
-		let render_pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+		let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("WallRender pipeline layout"),
 			bind_group_layouts: &[&bind_group_0_layout, &bind_group_1_layout],
 			..Default::default()
 		});
 
-		let fillscreen_shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let fillscreen_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender fillscreen shader module"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::FILLSCREEN.into())
 		});
-		let firstperson_wall_shader_frag = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let firstperson_wall_shader_frag = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender firstperson wall shader module"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_WALL_FRAG.into())
 		});
 
-		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::pipeline"),
 			layout: Some(&render_pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -316,7 +317,7 @@ impl Data {
 				module: &firstperson_wall_shader_frag,
 				entry_point: "main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: webgpu.config.format,
+					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]

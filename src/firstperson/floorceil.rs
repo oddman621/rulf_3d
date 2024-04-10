@@ -1,5 +1,5 @@
 use crate::{
-	webgpu::WebGPU, 
+	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig}, 
 	asset::{ImageByte, ShaderSource}
 };
 use super::{SurfaceInfo, FloorCeilCameraInfo, ScanlineData};
@@ -35,32 +35,33 @@ impl Data {
 
 impl Data {
 	pub fn new(webgpu: &WebGPU) -> Self {
-		let surface_info = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let (device, queue) = webgpu.get_device();
+		let surface_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.surface_info"),
 			size: std::mem::size_of::<SurfaceInfo>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let camera_info = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let camera_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.camera_info"),
 			size: std::mem::size_of::<FloorCeilCameraInfo>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
-		let tilemap_info = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let tilemap_info = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data.tilemap_info"),
 			size: std::mem::size_of::<glam::UVec2>() as u64 + std::mem::size_of::<glam::IVec2>() as u64 * Self::MAXIMUM_TILEMAP_SIZE,
 			usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let scanlines = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let scanlines = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data._scanlines"),
 			size: std::mem::size_of::<ScanlineData>() as u64 * Self::MAX_HEIGHT,
 			usage: wgpu::BufferUsages::STORAGE,
 			mapped_at_creation: false
 		});
-		let pixels = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let pixels = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("floorceil::Data._pixels"),
 			size: Self::PIXELINFO_SIZE * Self::MAX_WIDTH * Self::MAX_HEIGHT,
 			usage: wgpu::BufferUsages::STORAGE,
@@ -74,7 +75,7 @@ impl Data {
 			height: array_image.height() / 5,
 			depth_or_array_layers: 25
 		};
-		let floor_texarray = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+		let floor_texarray = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("floorceil::Data._floor_texarray"),
 			size: texarray_size,
 			mip_level_count: 1,
@@ -84,7 +85,7 @@ impl Data {
 			usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
 			view_formats: &[]
 		});
-		let ceil_texarray = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+		let ceil_texarray = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("floorceil::Data._ceil_texarray"),
 			size: texarray_size,
 			mip_level_count: 1,
@@ -109,7 +110,7 @@ impl Data {
 				depth_or_array_layers: 1
 			};
 
-			webgpu.queue.write_texture(
+			queue.write_texture(
 				wgpu::ImageCopyTexture {
 					texture: &floor_texarray,
 					aspect: wgpu::TextureAspect::All,
@@ -118,7 +119,7 @@ impl Data {
 				}, 
 				&imgdata, data_layout, size
 			);
-			webgpu.queue.write_texture(
+			queue.write_texture(
 				wgpu::ImageCopyTexture {
 					texture: &ceil_texarray,
 					aspect: wgpu::TextureAspect::All,
@@ -140,10 +141,10 @@ impl Data {
 			..Default::default()
 		});
 
-		let sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor::default());
+		let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 
 		let bind_group_layouts = [
-			webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 				label: Some("floorceil bind group layout 0"),
 				entries: & [
 					wgpu::BindGroupLayoutEntry {
@@ -178,7 +179,7 @@ impl Data {
 					},
 				]
 			}),
-			webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 				label: Some("floorceil bind group layout 1"),
 				entries: &[
 					wgpu::BindGroupLayoutEntry {
@@ -203,7 +204,7 @@ impl Data {
 					}
 				]
 			}),
-			webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 				label: Some("floorceil bind group layout 2"),
 				entries: &[
 					wgpu::BindGroupLayoutEntry {
@@ -237,7 +238,7 @@ impl Data {
 		];
 
 		let bind_groups = [
-			webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			device.create_bind_group(&wgpu::BindGroupDescriptor {
 				label: Some("floorceil::Data.bind_groups[0]"),
 				layout: &bind_group_layouts[0],
 				entries: &[
@@ -255,7 +256,7 @@ impl Data {
 					}
 				]
 			}),
-			webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			device.create_bind_group(&wgpu::BindGroupDescriptor {
 				label: Some("floorceil::Data.bind_groups[1]"),
 				layout: &bind_group_layouts[1],
 				entries: &[
@@ -269,7 +270,7 @@ impl Data {
 					}
 				]
 			}),
-			webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+			device.create_bind_group(&wgpu::BindGroupDescriptor {
 				label: Some("floorceil::Data.bind_groups[2]"),
 				layout: &bind_group_layouts[2],
 				entries: &[
@@ -289,29 +290,29 @@ impl Data {
 			})
 		];
 
-		let fillscreen_shader = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let fillscreen_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("floorceil fillscreen shader"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::FILLSCREEN.into())
 		});
-		let fpfloorceil_shader = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let fpfloorceil_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("floorceil first person floorceil shader"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::FIRSTPERSON_FLOORCEIL.into())
 		});
 
-		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+		let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("floorceil pipeline layout"),
 			bind_group_layouts: &[&bind_group_layouts[0], &bind_group_layouts[1], &bind_group_layouts[2]],
 			push_constant_ranges: &[]
 		});
 
 		let compute_pipelines = [
-			webgpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+			device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 				label: Some("floorceil::Data.compute_pipelines[0]"),
 				layout: Some(&pipeline_layout),
 				module: &fpfloorceil_shader,
 				entry_point: "scanline_process"
 			}),
-			webgpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+			device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 				label: Some("floorceil::Data.compute_pipelines[1]"),
 				layout: Some(&pipeline_layout),
 				module: &fpfloorceil_shader,
@@ -319,7 +320,7 @@ impl Data {
 			})
 		];
 
-		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("floorceil::Data.render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -348,7 +349,7 @@ impl Data {
 				module: &fpfloorceil_shader,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: webgpu.config.format,
+					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]

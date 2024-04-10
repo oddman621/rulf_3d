@@ -1,5 +1,5 @@
 use wgpu::util::DeviceExt;
-use crate::webgpu::WebGPU;
+use crate::webgpu::{WebGPU, WebGPUDevice, WebGPUSurface, WebGPUConfig};
 use crate::game::GameWorld;
 use crate::asset::ShaderSource;
 
@@ -89,22 +89,23 @@ impl Renderer {
 		let actors_pos_ang = game_world.actors_position_angle_flatten();
 		let actor_color = glam::vec4(0.3, 0.2, 0.1, 1.0);
 
-		webgpu.queue.write_buffer(&self.wall_render.instb, 0, bytemuck::cast_slice(walls.as_slice()));
-		webgpu.queue.write_buffer(&self.wall_render.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
-		webgpu.queue.write_buffer(&self.wall_render.gridsize_ub, 0, bytemuck::cast_slice(&[gridsize]));
+		let (device, queue) = webgpu.get_device();
+		queue.write_buffer(&self.wall_render.instb, 0, bytemuck::cast_slice(walls.as_slice()));
+		queue.write_buffer(&self.wall_render.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
+		queue.write_buffer(&self.wall_render.gridsize_ub, 0, bytemuck::cast_slice(&[gridsize]));
 		self.wall_render.instb_len = walls.len() as u32 / 3;
 
-		webgpu.queue.write_buffer(&self.actor_render.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
-		webgpu.queue.write_buffer(&self.actor_render.actorsize_ub, 0, bytemuck::cast_slice(&[actor_size]));
-		webgpu.queue.write_buffer(&self.actor_render.color_ub, 0, bytemuck::cast_slice(&[actor_color]));
-		webgpu.queue.write_buffer(&self.actor_render.instb, 0, bytemuck::cast_slice(actors_pos_ang.as_slice()));
+		queue.write_buffer(&self.actor_render.viewproj_ub, 0, bytemuck::cast_slice(&[viewproj]));
+		queue.write_buffer(&self.actor_render.actorsize_ub, 0, bytemuck::cast_slice(&[actor_size]));
+		queue.write_buffer(&self.actor_render.color_ub, 0, bytemuck::cast_slice(&[actor_color]));
+		queue.write_buffer(&self.actor_render.instb, 0, bytemuck::cast_slice(actors_pos_ang.as_slice()));
 		self.actor_render.instb_len = actors_pos_ang.len() as u32;
 
 
-		let output = webgpu.surface.get_current_texture().unwrap();
+		let output = webgpu.get_surface().get_current_texture().unwrap();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-		let mut encoder = webgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+		let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 		let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("Renderer::draw() clear color"),
 			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -131,41 +132,42 @@ impl Renderer {
 		render_pass.draw(0..3, 0..self.actor_render.instb_len as u32);
 		
 		drop(render_pass);
-		webgpu.queue.submit(Some(encoder.finish()));
+		queue.submit(Some(encoder.finish()));
 		output.present();
 	}
 }
 
 impl WallRender {
 	fn new(webgpu: &WebGPU) -> Self {
-		let vb = webgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+		let (device, queue) = webgpu.get_device();
+		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("WallRender::vb"),
 			contents: bytemuck::cast_slice(&Self::QUAD_VERTICES),
 			usage: wgpu::BufferUsages::VERTEX
 		});
 
-		let instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor {// offset: [u32;2], texid: u32
+		let instb = device.create_buffer(&wgpu::BufferDescriptor {// offset: [u32;2], texid: u32
 			label: Some("WallRender::instb"),
 			size: Self::MAX_WALL_INSTANCE * std::mem::size_of::<u32>() as u64 * 3,
 			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let viewproj_ub = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::viewproj_ub"),
 			size: std::mem::size_of::<glam::Mat4>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let gridsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let gridsize_ub = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("WallRender::gridsize_ub"),
 			size: std::mem::size_of::<f32>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let texture_sampler = webgpu.device.create_sampler(&wgpu::SamplerDescriptor::default());
+		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
 		let wall_array_image = image::load_from_memory(include_bytes!("asset/all_6.jpg")).unwrap();
 		let texture_array_size = wgpu::Extent3d {
@@ -173,7 +175,7 @@ impl WallRender {
 			height: wall_array_image.height() / 5,
 			depth_or_array_layers: 25
 		};
-		let texture_array = webgpu.device.create_texture(&wgpu::TextureDescriptor {
+		let texture_array = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("WallRender::_texture_array"),
 			size: texture_array_size,
 			mip_level_count: 1,
@@ -188,7 +190,7 @@ impl WallRender {
 
 		for layer in 1..=5 {
 			for offset in 0..=4 {
-				webgpu.queue.write_texture(
+				queue.write_texture(
 					wgpu::ImageCopyTexture {
 						texture: &texture_array,
 						aspect: wgpu::TextureAspect::All,
@@ -217,7 +219,7 @@ impl WallRender {
 		});
 
 
-		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("WallRender bind group layout"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry { //view projection mat4x4
@@ -259,7 +261,7 @@ impl WallRender {
 			]
 		});
 
-		let bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+		let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("WallRender::bind_group"),
 			layout: &bind_group_layout,
 			entries: &[
@@ -282,17 +284,17 @@ impl WallRender {
 			]
 		});
 
-		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+		let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("WallRender pipeline layout"),
 			bind_group_layouts: &[&bind_group_layout],
 			push_constant_ranges: &[]
 		});
 
-		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("WallRender wall.wgsl shader"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_WALL.into())
 		});
-		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("WallRender::render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -353,7 +355,7 @@ impl WallRender {
 				module: &shader_module,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: webgpu.config.format,
+					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]
@@ -370,41 +372,42 @@ impl WallRender {
 
 impl ActorRender {
 	fn new(webgpu: &WebGPU) -> Self {
-		let vb = webgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+		let (device, _) = webgpu.get_device();
+		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("ActorRender::vb"),
 			usage: wgpu::BufferUsages::VERTEX,
 			contents: bytemuck::cast_slice(&Self::TRIANGLE_VERTICES)
 		});
 
-		let instb = webgpu.device.create_buffer(&wgpu::BufferDescriptor { //pos: [f32;2], ang: f32
+		let instb = device.create_buffer(&wgpu::BufferDescriptor { //pos: [f32;2], ang: f32
 			label: Some("ActorRender::instb"),
 			size: std::mem::size_of::<f32>() as u64 * 3 * Self::MAX_ACTOR_INSTANCE,
 			usage:wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let viewproj_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let viewproj_ub = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("ActorRender::viewproj_ub"),
 			size: std::mem::size_of::<glam::Mat4>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 		
-		let actorsize_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let actorsize_ub = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("ActorRender::actorsize_ub"),
 			size: std::mem::size_of::<f32>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let color_ub = webgpu.device.create_buffer(&wgpu::BufferDescriptor {
+		let color_ub = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("ActorRender::color_ub"),
 			size: std::mem::size_of::<glam::Vec4>() as u64,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false
 		});
 
-		let bind_group_layout = webgpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+		let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 			label: Some("ActorRender bind group layout"),
 			entries: &[
 				wgpu::BindGroupLayoutEntry { //view projection mat4x4
@@ -440,7 +443,7 @@ impl ActorRender {
 			]
 		});
 
-		let bind_group = webgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+		let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("ActorRender::bind_group"),
 			layout: &bind_group_layout,
 			entries: &[
@@ -459,17 +462,17 @@ impl ActorRender {
 			]
 		});
 
-		let pipeline_layout = webgpu.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+		let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 			label: Some("ActorRender pipeline layout"),
 			bind_group_layouts: &[&bind_group_layout],
 			push_constant_ranges: &[]
 		});
-		let shader_module = webgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+		let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
 			label: Some("ActorRender actor.wgsl shader"),
 			source: wgpu::ShaderSource::Wgsl(ShaderSource::MINIMAP_ACTOR.into())
 		});
 
-		let render_pipeline = webgpu.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
+		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
 			label: Some("ActorRender::render_pipeline"),
 			layout: Some(&pipeline_layout),
 			vertex: wgpu::VertexState {
@@ -530,7 +533,7 @@ impl ActorRender {
 				module: &shader_module,
 				entry_point: "fs_main",
 				targets: &[Some(wgpu::ColorTargetState {
-					format: webgpu.config.format,
+					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
 				})]

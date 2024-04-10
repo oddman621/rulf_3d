@@ -5,12 +5,51 @@ use winit::window::Window;
 
 //렌더링엔진은 크게 3파트로 나눔: GUI, 미니맵, 1인칭
 
+pub trait WebGPUDevice {
+	fn get_device(&self) -> (&wgpu::Device, &wgpu::Queue);
+}
+
+pub trait WebGPUConfig {
+	fn get_config(&self) -> &wgpu::SurfaceConfiguration;
+}
+
+pub trait WebGPUSurface {
+	fn get_surface(&self) -> &wgpu::Surface;
+}
+
+pub struct MinimalWebGPU {
+	device: wgpu::Device,
+	queue: wgpu::Queue
+}
+
+impl MinimalWebGPU {
+	pub fn _new() -> Self {
+		let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+		let adapter = pollster::block_on(instance.request_adapter(
+			&wgpu::RequestAdapterOptions::default())).expect("Failed to request adapter.");
+		let (device, queue) = pollster::block_on(adapter.request_device(
+			&wgpu::DeviceDescriptor::default(), 
+			None
+		)).expect("Failed to request device.");
+
+		MinimalWebGPU {
+			device, queue
+		}
+	}
+}
+
+impl WebGPUDevice for MinimalWebGPU {
+	fn get_device(&self) -> (&wgpu::Device, &wgpu::Queue) {
+		(&self.device, &self.queue)
+	}
+}
+
 pub struct WebGPU
 {
-	pub surface: wgpu::Surface<'static>,
-	pub device: wgpu::Device,
-	pub queue: wgpu::Queue,
-	pub config: wgpu::SurfaceConfiguration
+	surface: wgpu::Surface<'static>,
+	device: wgpu::Device,
+	queue: wgpu::Queue,
+	config: wgpu::SurfaceConfiguration
 }
 
 
@@ -60,5 +99,23 @@ impl WebGPU {
 		surface.configure(&device, &config);
 
 		Self { surface, device, queue, config }
+	}
+}
+
+impl WebGPUDevice for WebGPU {
+	fn get_device(&self) -> (&wgpu::Device, &wgpu::Queue) {
+		(&self.device, &self.queue)
+	}
+}
+
+impl WebGPUConfig for WebGPU {
+	fn get_config(&self) -> &wgpu::SurfaceConfiguration {
+		&self.config
+	}
+}
+
+impl WebGPUSurface for WebGPU {
+	fn get_surface(&self) -> &wgpu::Surface {
+		&self.surface
 	}
 }
