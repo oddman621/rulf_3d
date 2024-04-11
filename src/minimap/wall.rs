@@ -2,7 +2,7 @@ use wgpu::util::DeviceExt;
 use crate:: {
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
 	asset::AssetServer,
-	geometry::{Vertex, QUAD}
+	geometry::{Vertex, QUAD_VERT}
 };
 
 pub struct WallRender {
@@ -24,7 +24,7 @@ impl WallRender {
 		let (device, _) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("WallRender::vb"),
-			contents: bytemuck::cast_slice(&QUAD),
+			contents: bytemuck::cast_slice(&QUAD_VERT),
 			usage: wgpu::BufferUsages::VERTEX
 		});
 
@@ -140,23 +140,7 @@ impl WallRender {
 					wgpu::VertexBufferLayout {
 						array_stride: std::mem::size_of::<Vertex>() as u64,
 						step_mode: wgpu::VertexStepMode::Vertex,
-						attributes: &[
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x3,
-								offset: 0,
-								shader_location: 0
-							},
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x3,
-								offset: std::mem::size_of::<glam::Vec3>() as u64,
-								shader_location: 1
-							},
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x2,
-								offset: std::mem::size_of::<glam::Vec3>() as u64 * 2,
-								shader_location: 2
-							}
-						]
+						attributes: &Vertex::VERT_ATTR
 					},
 					wgpu::VertexBufferLayout {
 						array_stride: std::mem::size_of::<[u32; 2]>() as u64 + std::mem::size_of::<u32>() as u64,

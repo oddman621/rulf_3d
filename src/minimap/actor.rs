@@ -2,7 +2,7 @@ use wgpu::util::DeviceExt;
 use crate:: {
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
 	asset::AssetServer,
-	geometry::{Vertex, ACTOR_TRIANGLE}
+	geometry::{Vertex, ACTOR_TRIANGLE_VERT}
 };
 
 pub struct ActorRender {
@@ -25,7 +25,7 @@ impl ActorRender {
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("ActorRender::vb"),
 			usage: wgpu::BufferUsages::VERTEX,
-			contents: bytemuck::cast_slice(&ACTOR_TRIANGLE)
+			contents: bytemuck::cast_slice(&ACTOR_TRIANGLE_VERT)
 		});
 
 		let instb = device.create_buffer(&wgpu::BufferDescriptor { //pos: [f32;2], ang: f32
@@ -128,23 +128,7 @@ impl ActorRender {
 					wgpu::VertexBufferLayout {
 						array_stride: std::mem::size_of::<Vertex>() as u64,
 						step_mode: wgpu::VertexStepMode::Vertex,
-						attributes: &[
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x3,
-								offset: 0,
-								shader_location: 0
-							},
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x3,
-								offset: std::mem::size_of::<glam::Vec3>() as u64,
-								shader_location: 1
-							},
-							wgpu::VertexAttribute {
-								format: wgpu::VertexFormat::Float32x2,
-								offset: std::mem::size_of::<glam::Vec3>() as u64 * 2,
-								shader_location: 2
-							}
-						]
+						attributes: &Vertex::VERT_ATTR
 					},
 					wgpu::VertexBufferLayout {
 						array_stride: std::mem::size_of::<f32>() as u64 * 3,
