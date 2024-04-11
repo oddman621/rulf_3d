@@ -1,9 +1,9 @@
 use wgpu::util::DeviceExt;
 use crate:: {
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
-	asset::AssetServer
+	asset::AssetServer,
+	geometry::{Vertex, ACTOR_TRIANGLE}
 };
-use super::Vertex;
 
 pub struct ActorRender {
 
@@ -20,20 +20,12 @@ pub struct ActorRender {
 
 impl ActorRender {
 	const MAX_ACTOR_INSTANCE: u64 = 512;
-	const TRIANGLE_VERTICES: [Vertex; 3] = [
-		Vertex { position: glam::vec3(0.5, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 0.5) },
-		Vertex { position: glam::vec3(-0.5, 0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 0.0) },
-		Vertex { position: glam::vec3(-0.5, -0.5, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 1.0) }
-	];
-}
-
-impl ActorRender {
 	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, _) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("ActorRender::vb"),
 			usage: wgpu::BufferUsages::VERTEX,
-			contents: bytemuck::cast_slice(&Self::TRIANGLE_VERTICES)
+			contents: bytemuck::cast_slice(&ACTOR_TRIANGLE)
 		});
 
 		let instb = device.create_buffer(&wgpu::BufferDescriptor { //pos: [f32;2], ang: f32

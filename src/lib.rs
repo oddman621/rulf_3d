@@ -36,6 +36,7 @@ mod game;
 mod input;
 mod minimap;
 mod firstperson;
+mod geometry;
 
 pub struct Rulf3D;
 

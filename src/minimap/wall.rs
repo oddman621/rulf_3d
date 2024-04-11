@@ -1,9 +1,9 @@
 use wgpu::util::DeviceExt;
 use crate:: {
 	webgpu::{WebGPU, WebGPUDevice, WebGPUConfig},
-	asset::AssetServer
+	asset::AssetServer,
+	geometry::{Vertex, QUAD}
 };
-use super::Vertex;
 
 pub struct WallRender {
 	pub vb: wgpu::Buffer,
@@ -17,22 +17,14 @@ pub struct WallRender {
 	pub pipeline: wgpu::RenderPipeline,
 }
 
-impl WallRender {
-	const MAX_WALL_INSTANCE: u64 = 512 * 512;
-	const QUAD_VERTICES: [Vertex; 4] = [
-		Vertex { position: glam::vec3(1.0, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 1.0) },
-		Vertex { position: glam::vec3(1.0, 1.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(1.0, 0.0) },
-		Vertex { position: glam::vec3(0.0, 0.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 1.0) },
-		Vertex { position: glam::vec3(0.0, 1.0, 0.0), color: glam::Vec3::ONE, uv: glam::vec2(0.0, 0.0) }
-	];
-}
 
 impl WallRender {
+	const MAX_WALL_INSTANCE: u64 = 512 * 512;
 	pub fn new(webgpu: &WebGPU, asset_server: &AssetServer) -> Self {
 		let (device, _) = webgpu.get_device();
 		let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("WallRender::vb"),
-			contents: bytemuck::cast_slice(&Self::QUAD_VERTICES),
+			contents: bytemuck::cast_slice(&QUAD),
 			usage: wgpu::BufferUsages::VERTEX
 		});
 

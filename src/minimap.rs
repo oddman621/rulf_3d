@@ -7,14 +7,6 @@ use crate:: {
 mod wall;
 mod actor;
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
-	position: glam::Vec3,
-	color: glam::Vec3,
-	uv: glam::Vec2
-}
-
 pub struct Renderer {
 	wall_render: wall::WallRender,
 	actor_render: actor::ActorRender,
