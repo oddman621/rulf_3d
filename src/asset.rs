@@ -39,10 +39,10 @@ pub enum TextureType {
 }
  
 pub enum AssetServerError {
-    DuplicatedName, 
+    DuplicatedTextureName, 
 	OpenFileFailed(std::io::Error), 
 	ReadImageFailed(image::ImageError), 
-	NameNotFound,
+	ImageNameNotFound,
 	InvalidGridLength,
 	InvalidPosition,
 	InvalidSize
@@ -58,8 +58,9 @@ impl AssetServer {
 			("minimap_actor", "asset/minimap_actor.wgsl"),
 			("minimap_wall", "asset/minimap_wall.wgsl"),
 		];
-		const IMAGES: [(&'static str, &'static str); 1] = [
-			("all_6", "asset/all_6.jpg")
+		const IMAGES: [(&'static str, &'static str); 2] = [
+			("all_6", "asset/all_6.jpg"),
+			("buddha_16x16", "asset/buddha_16x16.png")
 		];
 
 		let mut asset_server = AssetServer::new();
@@ -77,7 +78,7 @@ impl AssetServer {
 		}
 
 		if let Err(_) = asset_server.create_image_texture(
-			device, queue, "all_6", 
+			device, queue, "all_6", "all_6",
 			&TextureType::Grid { 
 				order: ArrayOrder::Row,
 				x: 5, y: 5
@@ -85,6 +86,10 @@ impl AssetServer {
 		) {
 			panic!("Failed to create texture all_6");
 		}
+
+		// if let Err(_) = asset_server.create_image_texture {
+		// 	device, queue, "buddha_16x16"
+		// }
 
 		asset_server
 	}
@@ -125,7 +130,7 @@ impl AssetServer {
  
     pub fn load_wgsl(&mut self, device: &wgpu::Device, name: &'static str, path: &str) -> Result<(), AssetServerError> {
         if self.shaders.contains_key(name) {
-            return Err(AssetServerError::DuplicatedName);
+            return Err(AssetServerError::DuplicatedTextureName);
         }
  
         let string = match Self::load_str(Path::new(path)) {
@@ -145,7 +150,7 @@ impl AssetServer {
  
     pub fn load_image(&mut self, name: &'static str, path: &str) -> Result<(), AssetServerError> {
         if self.images.contains_key(name) {
-            return Err(AssetServerError::DuplicatedName);
+            return Err(AssetServerError::DuplicatedTextureName);
         }
  
         let bytes = match Self::load_byte(Path::new(path)) {
@@ -171,13 +176,13 @@ impl AssetServer {
 		self.shaders.get(name)
 	}
 
-	pub fn create_image_texture(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &'static str, textype: &TextureType) -> Result<(), AssetServerError> {
+	pub fn create_image_texture(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, image_name: &'static str, name: &'static str, textype: &TextureType) -> Result<(), AssetServerError> {
 		if self.textures.contains_key(name) {
-			return Err(AssetServerError::DuplicatedName);
+			return Err(AssetServerError::DuplicatedTextureName);
 		}
 
-		let image = match self.images.get(name) {
-			None => return Err(AssetServerError::NameNotFound),
+		let image = match self.images.get(image_name) {
+			None => return Err(AssetServerError::ImageNameNotFound),
 			Some(img) => img
 		};
 		let data = image.to_rgba8();
