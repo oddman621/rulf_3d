@@ -4,7 +4,7 @@ use std::io::Read;
 use std::path::Path;
 use std::collections::HashMap;
  
-pub struct AssetServer { //TODO: AssetServer
+pub struct AssetServer {
     shaders: HashMap<&'static str, wgpu::ShaderModule>,
     images: HashMap<&'static str, image::DynamicImage>,
 	textures: HashMap<&'static str, wgpu::Texture>
@@ -42,9 +42,10 @@ pub enum AssetServerError {
     DuplicatedName, 
 	OpenFileFailed(std::io::Error), 
 	ReadImageFailed(image::ImageError), 
-	NameNotFound, 
-	InvalidSize, 
-	_InvalidPosition
+	NameNotFound 
+	// InvalidSize,
+	// InvalidGridSize,
+	// InvalidPosition
 }
 
 impl AssetServer {
@@ -217,66 +218,9 @@ impl AssetServer {
 				self.textures.insert(name, texture);
 				Ok(())
 			},
-			TextureType::Grid { order, x, y } => {
-				let length = x * y;
-				if length == 0 {
-					return Err(AssetServerError::InvalidSize);
-				}
-				let size = wgpu::Extent3d {
-					width: image.width() / x,
-					height: image.height() / y,
-					depth_or_array_layers: length
-				};
-				let texture = device.create_texture(&wgpu::TextureDescriptor {
-					label: Some(name),
-					size,
-					mip_level_count: 1,
-					sample_count: 1,
-					dimension: wgpu::TextureDimension::D2,
-					format: wgpu::TextureFormat::Rgba8UnormSrgb,
-					usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-					view_formats: &[]
-				});
-
-				let offset = |i| match order {
-					ArrayOrder::Row => (size.width * (i % x) + size.width * x * size.height * (i / x)) * 4,
-					ArrayOrder::_Column => (size.width * x * size.height * (i % x) + size.width * (i / x)) * 4
-				};
-
-				for l in 0..length {
-					queue.write_texture(
-						wgpu::ImageCopyTexture {
-							texture: &texture,
-							aspect: wgpu::TextureAspect::All,
-							mip_level: 0,
-							origin: wgpu::Origin3d {
-								x: 0, y: 0, z: l
-							}
-						},
-						&data,
-						wgpu::ImageDataLayout {
-							offset: offset(l) as u64,
-							bytes_per_row: Some(4 * size.width * x),
-							rows_per_image: Some(size.height)
-						},
-						wgpu::Extent3d {
-							width: size.width,
-							height: size.height,
-							depth_or_array_layers: 1
-						}
-					)
-				};
-
-				self.textures.insert(name, texture);
-				Ok(())
-			},
-			_ => todo!()
-			// TextureType::_Partial { x, y, width, height } => {
-			// 	todo!()
-			// },
-			// TextureType::_PaddingGrid { order, x, y, left, right, top, bottom } => {
-			// 	todo!()
-			// }
+			// TODO: Implement Writing Padding Texture
+			// Old code here https://gist.github.com/oddman621/b7ee8e29dd008f29118b70948d7a4001
+			_ => unimplemented!("Padding texture is harder to deal with than I expected...")
 		}
 	}
 }
