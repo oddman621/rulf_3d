@@ -42,8 +42,8 @@ pub enum AssetServerError {
     DuplicatedName, 
 	OpenFileFailed(std::io::Error), 
 	ReadImageFailed(image::ImageError), 
-	NameNotFound 
-	// InvalidSize,
+	NameNotFound,
+	InvalidSize,
 	// InvalidGridSize,
 	// InvalidPosition
 }
@@ -51,15 +51,15 @@ pub enum AssetServerError {
 impl AssetServer {
 	pub fn create_test_asset_server(device: &wgpu::Device, queue: &wgpu::Queue) -> AssetServer {
 		const SHADER_SOURCES: [(&'static str, &'static str); 6] = [
-			("fillscreen", "src/asset/fillscreen.wgsl"),
-			("firstperson_wall_compute", "src/asset/firstperson_wall_compute.wgsl"),
-			("firstperson_wall_frag", "src/asset/firstperson_wall_frag.wgsl"),
-			("firstperson_floorceil", "src/asset/firstperson_floorceil.wgsl"),
-			("minimap_actor", "src/asset/minimap_actor.wgsl"),
-			("minimap_wall", "src/asset/minimap_wall.wgsl"),
+			("fillscreen", "asset/fillscreen.wgsl"),
+			("firstperson_wall_compute", "asset/firstperson_wall_compute.wgsl"),
+			("firstperson_wall_frag", "asset/firstperson_wall_frag.wgsl"),
+			("firstperson_floorceil", "asset/firstperson_floorceil.wgsl"),
+			("minimap_actor", "asset/minimap_actor.wgsl"),
+			("minimap_wall", "asset/minimap_wall.wgsl"),
 		];
 		const IMAGES: [(&'static str, &'static str); 1] = [
-			("all_6", "src/asset/all_6.jpg")
+			("all_6", "asset/all_6.jpg")
 		];
 
 		let mut asset_server = AssetServer::new();
@@ -218,6 +218,59 @@ impl AssetServer {
 				self.textures.insert(name, texture);
 				Ok(())
 			},
+			TextureType::Grid { order, x, y } => {
+					let length = x * y;
+					if length == 0 {
+						return Err(AssetServerError::InvalidSize);
+					}
+					let size = wgpu::Extent3d {
+						width: image.width() / x,
+						height: image.height() / y,
+						depth_or_array_layers: length
+					};
+					let texture = device.create_texture(&wgpu::TextureDescriptor {
+						label: Some(name),
+						size,
+						mip_level_count: 1,
+						sample_count: 1,
+						dimension: wgpu::TextureDimension::D2,
+						format: wgpu::TextureFormat::Rgba8UnormSrgb,
+						usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+						view_formats: &[]
+					});
+	
+					let offset = |i| match order {
+						ArrayOrder::Row => (size.width * (i % x) + size.width * x * size.height * (i / x)) * 4,
+						ArrayOrder::_Column => (size.width * x * size.height * (i % x) + size.width * (i / x)) * 4
+					};
+	
+					for l in 0..length {
+						queue.write_texture(
+							wgpu::ImageCopyTexture {
+								texture: &texture,
+								aspect: wgpu::TextureAspect::All,
+								mip_level: 0,
+								origin: wgpu::Origin3d {
+									x: 0, y: 0, z: l
+								}
+							},
+							&data,
+							wgpu::ImageDataLayout {
+								offset: offset(l) as u64,
+								bytes_per_row: Some(4 * size.width * x),
+								rows_per_image: Some(size.height)
+							},
+							wgpu::Extent3d {
+								width: size.width,
+								height: size.height,
+								depth_or_array_layers: 1
+							}
+						)
+					};
+	
+					self.textures.insert(name, texture);
+					Ok(())
+				},
 			// TODO: Implement Writing Padding Texture
 			// Old code here https://gist.github.com/oddman621/b7ee8e29dd008f29118b70948d7a4001
 			_ => unimplemented!("Padding texture is harder to deal with than I expected...")
