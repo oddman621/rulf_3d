@@ -43,9 +43,9 @@ pub enum AssetServerError {
 	OpenFileFailed(std::io::Error), 
 	ReadImageFailed(image::ImageError), 
 	NameNotFound,
-	InvalidSize,
-	// InvalidGridSize,
-	// InvalidPosition
+	InvalidGridLength,
+	InvalidPosition,
+	InvalidSize
 }
 
 impl AssetServer {
@@ -78,10 +78,11 @@ impl AssetServer {
 
 		if let Err(_) = asset_server.create_image_texture(
 			device, queue, "all_6", 
-			&TextureType::Grid {
+			&TextureType::Grid { 
 				order: ArrayOrder::Row,
 				x: 5, y: 5
-		}) {
+			}
+		) {
 			panic!("Failed to create texture all_6");
 		}
 
@@ -221,7 +222,7 @@ impl AssetServer {
 			TextureType::Grid { order, x, y } => {
 					let length = x * y;
 					if length == 0 {
-						return Err(AssetServerError::InvalidSize);
+						return Err(AssetServerError::InvalidGridLength);
 					}
 					let size = wgpu::Extent3d {
 						width: image.width() / x,
@@ -271,9 +272,105 @@ impl AssetServer {
 					self.textures.insert(name, texture);
 					Ok(())
 				},
-			// TODO: Implement Writing Padding Texture
-			// Old code here https://gist.github.com/oddman621/b7ee8e29dd008f29118b70948d7a4001
-			_ => unimplemented!("Padding texture is harder to deal with than I expected...")
+			TextureType::_PaddingGrid { order, x, y, left, right, top, bottom } => {
+				let length = x * y;
+				if length == 0 {
+					return Err(AssetServerError::InvalidGridLength);
+				}
+				let size = wgpu::Extent3d {
+					width: image.width() / x - (left + right),
+					height: image.height() / y - (bottom + top),
+					depth_or_array_layers: length
+				};
+				let texture = device.create_texture(&wgpu::TextureDescriptor {
+					label: Some(name),
+					size,
+					mip_level_count: 1,
+					sample_count: 1,
+					dimension: wgpu::TextureDimension::D2,
+					format: wgpu::TextureFormat::Rgba8UnormSrgb,
+					usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+					view_formats: &[]
+				});
+
+				let gridsize_width = image.width() / x;
+				let gridsize_height = image.height() / y;
+				let offset = |i| match order {
+					ArrayOrder::Row => (gridsize_width * (i % x) + gridsize_width * x * gridsize_height * (i / x)) * 4,
+					ArrayOrder::_Column => (gridsize_width * x * gridsize_height * (i % x) + gridsize_width * (i / x)) * 4
+				};
+				let grid_offset = (image.width() * top + left) * 4;
+				for l in 0..length {
+					queue.write_texture(
+						wgpu::ImageCopyTexture {
+							texture: &texture,
+							aspect: wgpu::TextureAspect::All,
+							mip_level: 0,
+							origin: wgpu::Origin3d {
+								x: 0, y: 0, z: l
+							}
+						},
+						&data,
+						wgpu::ImageDataLayout {
+							offset: offset(l) as u64 + grid_offset as u64,
+							bytes_per_row: Some(4 * image.width()),
+							rows_per_image: Some(image.height())
+						},
+						wgpu::Extent3d {
+							width: size.width,
+							height: size.height,
+							depth_or_array_layers: 1
+						}
+					)
+				};
+
+				self.textures.insert(name, texture);
+				Ok(())
+			},
+			TextureType::_Partial { x, y, width, height } => { // NOTE: Not Tested
+				if *x as i32 == 0 || *y as i32 == 0 {
+					return Err(AssetServerError::InvalidPosition);
+				}
+				if x + width >= image.width() || y + height >= image.height() {
+					return Err(AssetServerError::InvalidSize)
+				}
+				let size = wgpu::Extent3d {
+					width: *width,
+					height: *height,
+					depth_or_array_layers: 1
+				};
+
+				let texture = device.create_texture(&wgpu::TextureDescriptor {
+					label: Some(name),
+					size,
+					mip_level_count: 1,
+					sample_count: 1,
+					dimension: wgpu::TextureDimension::D2,
+					format: wgpu::TextureFormat::Rgba8UnormSrgb,
+					usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+					view_formats: &[]
+				});
+				let grid_offset = (image.width() * y + x) * 4;
+				queue.write_texture(
+					wgpu::ImageCopyTexture {
+						texture: &texture,
+						mip_level: 0,
+						origin: wgpu::Origin3d {
+							x: 0, y: 0, z:0
+						},
+						aspect: wgpu::TextureAspect::All
+					}, 
+					&data,
+					wgpu::ImageDataLayout {
+						offset: grid_offset as u64,
+						bytes_per_row: Some(image.width() * 4),
+						rows_per_image: Some(image.height())
+					},
+					size
+				);
+				self.textures.insert(name, texture);
+				Ok(())
+			}
 		}
 	}
 }
