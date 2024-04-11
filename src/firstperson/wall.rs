@@ -56,7 +56,7 @@ impl Data {
 
 		let texture_sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 		
-		let texture_array = asset_server.get_texture("all_6").unwrap();
+		let texture_array = asset_server.get_texture("all_6_5x5").unwrap();
 		
 		let texture_array_view = texture_array.create_view(&wgpu::TextureViewDescriptor {
 			dimension: Some(wgpu::TextureViewDimension::D2Array), ..Default::default()

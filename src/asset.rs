@@ -78,7 +78,7 @@ impl AssetServer {
 		}
 
 		if let Err(_) = asset_server.create_image_texture(
-			device, queue, "all_6", "all_6",
+			device, queue, "all_6", "all_6_5x5",
 			&TextureType::Grid { 
 				order: ArrayOrder::Row,
 				x: 5, y: 5
@@ -87,9 +87,16 @@ impl AssetServer {
 			panic!("Failed to create texture all_6");
 		}
 
-		// if let Err(_) = asset_server.create_image_texture {
-		// 	device, queue, "buddha_16x16"
-		// }
+		// NOTE: no use yet!
+		if let Err(_) = asset_server.create_image_texture(
+			device, queue, "buddha_16x16", "buddha16_5x2",
+			&TextureType::Grid {
+				order: ArrayOrder::Row,
+				x: 5, y: 2
+			} 
+		) {
+			panic!("Failed to create texture buddha16_5x2(buddha_16x16)")
+		}
 
 		asset_server
 	}

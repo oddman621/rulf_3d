@@ -66,7 +66,7 @@ impl Data {
 			mapped_at_creation: false
 		});
 
-		let tex_array = asset_server.get_texture("all_6").unwrap();
+		let tex_array = asset_server.get_texture("all_6_5x5").unwrap();
 		
 		let floor_texview = tex_array.create_view(&wgpu::TextureViewDescriptor {
 			label: Some("floorceil::Data._floor_texview"),
