@@ -1,3 +1,5 @@
+// BUG: Some parts of floors aren't drawn when resolution is about 4K or higher.
+
 struct SurfaceInfo {
 	width: u32,
 	height: u32
