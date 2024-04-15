@@ -102,6 +102,7 @@ impl Rulf3D {
                     if let Err(e) = window.set_cursor_grab(winit::window::CursorGrabMode::Confined) {
                         println!("{:?}", e);
                     }
+                    let _ = window.request_inner_size(winit::dpi::LogicalSize::new(1600, 1200));
                 }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
