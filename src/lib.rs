@@ -103,6 +103,7 @@ impl Rulf3D {
                         println!("{:?}", e);
                     }
                     let _ = window.request_inner_size(winit::dpi::LogicalSize::new(1600, 1200));
+                    window.set_outer_position(winit::dpi::LogicalPosition::new(400, 100));
                 }
                 Event::NewEvents(StartCause::Poll | StartCause::ResumeTimeReached { .. } | StartCause::WaitCancelled { .. }) =>
                 {
@@ -114,7 +115,7 @@ impl Rulf3D {
                         // input
                         let dir_input_vec = input_state.get_dir_input_vector();
 						let wishdir = game_world.get_player_forward_vector().rotate((-glam::Vec2::Y).rotate(dir_input_vec));
-						game_world.translate_player(wishdir * 100.0 * delta as f32);
+						game_world.translate_player(wishdir * 300.0 * delta as f32);
 
 						let mouse_rel_x = input_state.take_mouse_x_relative();
 						game_world.rotate_player(-mouse_rel_x.to_radians() * 100.0 * delta as f32);

@@ -87,7 +87,6 @@ impl AssetServer {
 			panic!("Failed to create texture all_6");
 		}
 
-		// NOTE: no use yet!
 		if let Err(_) = asset_server.create_image_texture(
 			device, queue, "buddha_16x16", "buddha16_5x2",
 			&TextureType::Grid {
