@@ -132,7 +132,7 @@ impl Renderer {
 
 
 		queue.write_buffer(&self.test_blit_data.surface_info, 0, bytemuck::bytes_of(&surface_info));
-		let rect = Rect {left:0, right: 100, top: 0, bottom: 100};
+		let rect = Rect {left:0, right: 600, top: 0, bottom: 600};
 		queue.write_buffer(&self.test_blit_data.rect, 0, bytemuck::bytes_of(&rect));
 
 		let size = output.texture.size();
@@ -240,7 +240,7 @@ impl Renderer {
 			fov: PI / 2.3,
 			wall_data: wall::Data::new(webgpu, asset_server), 
 			floorceil_data: floorceil::Data::new(webgpu, asset_server), 
-			test_blit_data: sprite::BlitData::new(webgpu, asset_server),
+			test_blit_data: sprite::BlitData::test_blit(webgpu, asset_server),
 			depth_texture
 		}
 	}
