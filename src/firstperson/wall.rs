@@ -142,7 +142,9 @@ impl Data {
 			label: Some("wall::Data.compute_pipeline"),
 			layout: Some(&compute_pipeline_layout),
 			module: firstperson_wall_compute_shader,
-			entry_point: "multiraycast"
+			entry_point: "multiraycast",
+			compilation_options: wgpu::PipelineCompilationOptions::default(),
+			cache: None
 		});
 
 
@@ -240,7 +242,8 @@ impl Data {
 			vertex: wgpu::VertexState {
 				module: fillscreen_shader_module,
 				entry_point: "main",
-				buffers: &[]
+				buffers: &[],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			},
 			primitive: wgpu::PrimitiveState {
 				topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -266,9 +269,11 @@ impl Data {
 					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
-				})]
+				})],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			}),
-			multiview: None
+			multiview: None,
+			cache: None
 		});
 
 		Self {

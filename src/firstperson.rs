@@ -7,6 +7,7 @@ use crate::{
 
 mod wall;
 mod floorceil;
+mod sprite;
 
 const CAMERA_NEAR: f32 = 0.0;
 const CAMERA_FAR: f32 = 100.0;
@@ -57,10 +58,17 @@ struct WallCameraInfo {
 	far: f32
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Rect {
+	left: u32, right: u32, top: u32, bottom: u32
+}
+
 pub struct Renderer {
 	pub fov: f32,
 	floorceil_data: floorceil::Data,
 	wall_data: wall::Data,
+	test_blit_data: sprite::BlitData,
 	depth_texture: wgpu::Texture
 }
 
@@ -121,6 +129,11 @@ impl Renderer {
 		queue.write_buffer(&self.wall_data.tilemap_data, 0, bytemuck::cast_slice(&[tilemap_size]));
 		queue.write_buffer(&self.wall_data.tilemap_data, std::mem::size_of_val(&tilemap_size) as u64, bytemuck::cast_slice(&tilemap_wall_data));
 		queue.write_buffer(&self.wall_data.raycast_data_array_buffer, 0, bytemuck::cast_slice(&[surface_info.width]));
+
+
+		queue.write_buffer(&self.test_blit_data.surface_info, 0, bytemuck::bytes_of(&surface_info));
+		let rect = Rect {left:0, right: 100, top: 0, bottom: 100};
+		queue.write_buffer(&self.test_blit_data.rect, 0, bytemuck::bytes_of(&rect));
 
 		let size = output.texture.size();
 		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -197,6 +210,11 @@ impl Renderer {
 		render_pass.set_bind_group(1, &self.wall_data.render_bind_groups[1], &[]);
 		render_pass.draw(0..4, 0..1);
 
+		render_pass.set_pipeline(&self.test_blit_data.pipeline);
+		render_pass.set_bind_group(0, &self.test_blit_data.bind_groups[0], &[]);
+		render_pass.set_bind_group(1, &self.test_blit_data.bind_groups[1], &[]);
+		render_pass.draw(0..4, 0..1);
+
 		drop(render_pass);
 
 		queue.submit(Some(encoder.finish()));
@@ -222,6 +240,7 @@ impl Renderer {
 			fov: PI / 2.3,
 			wall_data: wall::Data::new(webgpu, asset_server), 
 			floorceil_data: floorceil::Data::new(webgpu, asset_server), 
+			test_blit_data: sprite::BlitData::new(webgpu, asset_server),
 			depth_texture
 		}
 	}

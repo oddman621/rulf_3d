@@ -158,7 +158,8 @@ impl WallRender {
 							}
 						]
 					}
-				]
+				],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			},
 			primitive: wgpu::PrimitiveState {
 				topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -178,9 +179,11 @@ impl WallRender {
 					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
-				})]
+				})],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			}),
-			multiview: None
+			multiview: None,
+			cache: None
 		});
 
 		Self {

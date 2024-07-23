@@ -50,13 +50,14 @@ pub enum AssetServerError {
 
 impl AssetServer {
 	pub fn create_test_asset_server(device: &wgpu::Device, queue: &wgpu::Queue) -> AssetServer {
-		const SHADER_SOURCES: [(&'static str, &'static str); 6] = [
+		const SHADER_SOURCES: [(&'static str, &'static str); 7] = [
 			("fillscreen", "asset/fillscreen.wgsl"),
 			("firstperson_wall_compute", "asset/firstperson_wall_compute.wgsl"),
 			("firstperson_wall_frag", "asset/firstperson_wall_frag.wgsl"),
 			("firstperson_floorceil", "asset/firstperson_floorceil.wgsl"),
 			("minimap_actor", "asset/minimap_actor.wgsl"),
 			("minimap_wall", "asset/minimap_wall.wgsl"),
+			("texture_blit", "asset/texture_screen_blit.wgsl")
 		];
 		const IMAGES: [(&'static str, &'static str); 2] = [
 			("all_6", "asset/all_6.jpg"),

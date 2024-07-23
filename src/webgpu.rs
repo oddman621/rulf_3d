@@ -77,7 +77,8 @@ impl WebGPU {
 			{
 				required_features: wgpu::Features::empty(),
 				required_limits: wgpu::Limits::default(),
-				label: None
+				label: None,
+				memory_hints: wgpu::MemoryHints::default()
 			}, 
 			None
 		)).expect("Failed to request device from adapter.");

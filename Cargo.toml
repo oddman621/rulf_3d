@@ -8,7 +8,8 @@ bytemuck = { version = "1.14.3", features = [ "derive" ] }
 glam = { version = "0.25.0", features = [ "bytemuck" ] }
 image = "0.24.9"
 pollster = "0.3.0"
-wgpu = "0.19.2"
+#wgpu = "0.19.2"
+wgpu = "22.0.0"
 winit = "0.29.12"
 
 [[bin]]

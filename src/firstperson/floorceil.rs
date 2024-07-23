@@ -242,13 +242,17 @@ impl Data {
 				label: Some("floorceil::Data.compute_pipelines[0]"),
 				layout: Some(&pipeline_layout),
 				module: fpfloorceil_shader,
-				entry_point: "scanline_process"
+				entry_point: "scanline_process",
+				compilation_options: wgpu::PipelineCompilationOptions::default(),
+				cache: None
 			}),
 			device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 				label: Some("floorceil::Data.compute_pipelines[1]"),
 				layout: Some(&pipeline_layout),
 				module: fpfloorceil_shader,
-				entry_point: "pixel_process"
+				entry_point: "pixel_process",
+				compilation_options: wgpu::PipelineCompilationOptions::default(),
+				cache: None
 			})
 		];
 
@@ -258,7 +262,8 @@ impl Data {
 			vertex: wgpu::VertexState {
 				module: fillscreen_shader,
 				entry_point: "main",
-				buffers: &[]
+				buffers: &[],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			},
 			primitive: wgpu::PrimitiveState {
 				topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -284,9 +289,11 @@ impl Data {
 					format: webgpu.get_config().format,
 					blend: Some(wgpu::BlendState::REPLACE),
 					write_mask: wgpu::ColorWrites::ALL
-				})]
+				})],
+				compilation_options: wgpu::PipelineCompilationOptions::default()
 			}),
-			multiview: None
+			multiview: None,
+			cache: None
 		});
 
 		Self {
