@@ -7,7 +7,7 @@ struct SurfaceInfo {
 
 struct CameraInfo {
 	pos: vec2<f32>,
-	pos_z: f32,
+	pos_z: f32, // Camera height
 	len: f32,
 	leftmost_ray: vec2<f32>,
 	rightmost_ray: vec2<f32>,
