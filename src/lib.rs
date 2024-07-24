@@ -62,7 +62,7 @@ impl Rulf3D {
             move |event, elwt| 
             match event 
             {
-                Event::DeviceEvent { event: winit::event::DeviceEvent::MouseMotion { delta: (x, _) }, .. } => { // NOTE: delta is not that accurate
+                Event::DeviceEvent { event: winit::event::DeviceEvent::MouseMotion { delta: (x, _) }, .. } => {
                     if focused {
                         input_state.add_mouse_x_relative((x * 0.033) as f32);
                     }

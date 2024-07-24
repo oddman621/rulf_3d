@@ -55,7 +55,7 @@ fn scanline_process(
 	let cam_plane = (camera.rightmost_ray - camera.leftmost_ray);
 	scanline.floor_step = row_distance * cam_plane / f32(surface.width);
 	scanline.floor = camera.pos + row_distance * camera.leftmost_ray;
-	scanline.depth = (row_distance * 2.0 - camera.near) / (camera.far - camera.near); // XXX: Coincidence Workaround Side Effect. Remultiply magic number here.
+	scanline.depth = (row_distance * 2.0 - camera.near) / (camera.far - camera.near); // HACK: Coincidence Workaround Side Effect. Remultiply magic number here.
 
 	scanlines[u32(n)] = scanline;
 }
